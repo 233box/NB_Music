@@ -17,3 +17,5 @@ Thumbs.db
 
 # 忽略更新用的快捷脚本
 update.bat
+# 本机启动脚本
+start.bat

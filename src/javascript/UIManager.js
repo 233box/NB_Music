@@ -35,12 +35,30 @@ class UIManager {
         this.initializePageEvents();
         this.initializeSettings();
         this.initializeAdvancedControls();
+        this.initializeSearchMode();
         this.initializeSearchSuggestions();
         this.initializeCustomSelects();
         this.initializeWelcomeDialog();
         this.initializeTrayControls();
         this.initializeAnimations(); // 新增动画初始化
         this.autoMaximize();
+    }
+    initializeSearchMode() {
+        const modeBtn = document.getElementById("searchModeBtn");
+        if (!modeBtn) return;
+        this.searchMode = localStorage.getItem("nbmusic_search_mode") || "local";
+        const updateBtn = () => {
+            const label = this.searchMode === "local" ? "歌单内" : "全网";
+            modeBtn.textContent = label;
+            modeBtn.title = this.searchMode === "local" ? "当前：歌单内搜索（点击切换为全网搜索）" : "当前：全网搜索（点击切换为歌单内搜索）";
+        };
+        updateBtn();
+        modeBtn.addEventListener("click", () => {
+            this.searchMode = this.searchMode === "local" ? "online" : "local";
+            localStorage.setItem("nbmusic_search_mode", this.searchMode);
+            updateBtn();
+            this.showNotification(`已切换到${this.searchMode === "local" ? "歌单内" : "全网"}搜索`, "info");
+        });
     }
     initializeSearchSuggestions() {
         const searchInput = document.querySelector(".search input");
@@ -73,7 +91,11 @@ class UIManager {
             }
 
             debounceTimer = setTimeout(async () => {
-                suggestions = await this.musicSearcher.getSearchSuggestions(term);
+                if (this.searchMode === "local") {
+                    suggestions = this.musicSearcher.getLocalSuggestions(term);
+                } else {
+                    suggestions = await this.musicSearcher.getSearchSuggestions(term);
+                }
                 if (!suggestions.length) {
                     clearSuggestions();
                 } else {
@@ -795,7 +817,11 @@ class UIManager {
             }
 
             // 执行搜索
-            await this.musicSearcher.searchMusic(keyword);
+            if (this.searchMode === "local") {
+                await this.musicSearcher.searchLocal(keyword);
+            } else {
+                await this.musicSearcher.searchMusic(keyword);
+            }
         } catch (error) {
             this.showNotification("搜索失败: " + error.message, "error");
         }

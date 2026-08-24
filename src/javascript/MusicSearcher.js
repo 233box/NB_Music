@@ -85,6 +85,78 @@ class MusicSearcher {
         }
     }
 
+    /**
+     * 在歌单内搜索（本地过滤，不请求网络）
+     * @param {string} keyword
+     */
+    async searchLocal(keyword) {
+        if (!keyword) return;
+
+        this.uiManager.show(".search-result");
+        const list = document.querySelector(".search-result .list");
+        list.innerHTML = "";
+
+        const kw = keyword.toLowerCase().trim();
+        const playlist = this.playlistManager.playlist || [];
+        const playlistName = this.playlistManager.playlistName || "当前歌单";
+
+        if (!playlist.length) {
+            list.innerHTML = '<div class="search-local-empty">当前歌单为空</div>';
+            return;
+        }
+
+        const matches = playlist.filter(
+            (song) =>
+                (song.title && song.title.toLowerCase().includes(kw)) ||
+                (song.artist && song.artist.toLowerCase().includes(kw))
+        );
+
+        if (!matches.length) {
+            list.innerHTML = `<div class="search-local-empty">在歌单「${playlistName}」中未找到「${keyword}」</div>`;
+            return;
+        }
+
+        const header = document.createElement("div");
+        header.className = "search-local-header";
+        header.textContent = `在歌单「${playlistName}」中找到 ${matches.length} 首`;
+        list.appendChild(header);
+
+        matches.forEach((song) => {
+            const div = this.uiManager.createSongElement(song, song.bvid, {
+                isDelete: false,
+                isLove: false
+            });
+            div.addEventListener("click", () => {
+                const index = this.playlistManager.playlist.findIndex((item) => item.bvid === song.bvid);
+                if (index !== -1) {
+                    this.playlistManager.setPlayingNow(index);
+                    document.querySelector("#function-list .player").click();
+                }
+            });
+            list.appendChild(div);
+        });
+    }
+
+    /**
+     * 歌单内搜索建议
+     * @param {string} term
+     */
+    getLocalSuggestions(term) {
+        const kw = term.toLowerCase().trim();
+        const playlist = this.playlistManager.playlist || [];
+        const seen = new Set();
+        const result = [];
+        for (const song of playlist) {
+            if (!song.title) continue;
+            if (song.title.toLowerCase().includes(kw) && !seen.has(song.title)) {
+                seen.add(song.title);
+                result.push({ value: song.title, name: song.title });
+            }
+            if (result.length >= 8) break;
+        }
+        return result;
+    }
+
     async searchMusic(keyword, page = 1) {
         if (!keyword) return;
 

@@ -37,6 +37,10 @@
         transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
+    body.mobile-view .search-mode-btn {
+        display: none;
+    }
+
     body.mobile-view .titbar > .search.collapsed {
         width: 40px;
         border-radius: 50%;
