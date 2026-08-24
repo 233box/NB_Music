@@ -175,13 +175,13 @@
 }
 
 /* 歌词行位置变化效果增强 */
-.lyric-line.before-3 { opacity: 0.2; transform: translateY(-160px) scale(0.7); filter: blur(1px); }
-.lyric-line.before-2 { opacity: 0.3; transform: translateY(-110px) scale(0.8); filter: blur(0.7px); }
-.lyric-line.before-1 { opacity: 0.5; transform: translateY(-60px) scale(0.9); filter: blur(0.3px); }
-.lyric-line.after-1 { opacity: 0.5; transform: translateY(60px) scale(0.9); filter: blur(0.3px); }
-.lyric-line.after-2 { opacity: 0.3; transform: translateY(110px) scale(0.8); filter: blur(0.7px); }
-.lyric-line.after-3 { opacity: 0.2; transform: translateY(160px) scale(0.7); filter: blur(1px); }
-.lyric-line.distant { opacity: 0; transform: translateY(200px) scale(0.6); filter: blur(2px); }
+.lyric-line.before-3 { opacity: 0.25; transform: translateY(-160px) scale(0.88); }
+.lyric-line.before-2 { opacity: 0.35; transform: translateY(-110px) scale(0.93); }
+.lyric-line.before-1 { opacity: 0.55; transform: translateY(-60px) scale(0.97); }
+.lyric-line.after-1 { opacity: 0.55; transform: translateY(60px) scale(0.97); }
+.lyric-line.after-2 { opacity: 0.35; transform: translateY(110px) scale(0.93); }
+.lyric-line.after-3 { opacity: 0.25; transform: translateY(160px) scale(0.88); }
+.lyric-line.distant { opacity: 0; transform: translateY(200px) scale(0.85); }
 
 /* 单个字符动画增强 */
 .char {

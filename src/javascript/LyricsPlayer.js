@@ -676,60 +676,25 @@ class LyricsPlayer {
                     line.style.top = `${containerHeight / 2 - line.offsetHeight / 2}px`;
                 } else if (index === displayIndex - 1) {
                     line.classList.add("before-1");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 - 60}px`;
-                    }, 50);
                 } else if (index === displayIndex - 2) {
                     line.classList.add("before-2");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 - 110}px`;
-                    }, 100);
                 } else if (index === displayIndex - 3) {
                     line.classList.add("before-3");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 - 160}px`;
-                    }, 150);
                 } else if (index < displayIndex - 3) {
                     line.classList.add("distant");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 - 200}px`;
-                    }, 200);
                 } else if (index === displayIndex + 1) {
                     line.classList.add("after-1");
-                    // 下方行的动画延迟，创造瀑布落下效果
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 + 60}px`;
-                    }, 50);
                 } else if (index === displayIndex + 2) {
                     line.classList.add("after-2");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 + 110}px`;
-                    }, 100);
                 } else if (index === displayIndex + 3) {
                     line.classList.add("after-3");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 + 160}px`;
-                    }, 150);
                 } else if (index > displayIndex + 3) {
                     line.classList.add("distant");
-                    setTimeout(() => {
-                        line.style.top = `${containerHeight / 2 - line.offsetHeight / 2 + 200}px`;
-                    }, 200);
                 }
             });
         }
 
-        // 应用瀑布效果，确保索引有效
-        if (this.previousActiveIndex !== -1 && this.activeLineIndex !== -1 && this.previousActiveIndex < this.activeLineIndex) {
-            for (let i = this.previousActiveIndex; i < this.activeLineIndex; i++) {
-                if (i >= 0 && i < lyricLines.length) {
-                    const delay = (i - this.previousActiveIndex) * 120;
-                    setTimeout(() => {
-                        this.applyWaterfallEffect(lyricLines[i], i, this.activeLineIndex);
-                    }, delay);
-                }
-            }
-        }
+        // 平滑跟随：所有行随 transition 同步移动，无瀑布延迟
     }
 
     // 对单个行应用瀑布效果
