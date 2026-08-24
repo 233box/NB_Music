@@ -8,7 +8,13 @@ class LyricsPlayer {
      */
     constructor(lyricsString, audioElement, settingManager) {
         this.lyricsContainer = document.getElementById("lyrics-container");
+        // 先保存歌词偏移控件引用（构造清空容器前）
+        const offsetControl = document.getElementById("lyricOffsetControl");
         this.lyricsContainer.innerHTML = "";
+        // 构造清空后重新挂载偏移控件（CSS 绝对定位到角落）
+        if (offsetControl) {
+            this.lyricsContainer.appendChild(offsetControl);
+        }
         this.parsedData = this.parseLyrics(lyricsString);
         this.audio = audioElement;
         this.activeLines = new Set();
