@@ -643,14 +643,20 @@ class LyricsPlayer {
 
         // 重置所有行的样式
         lyricLines.forEach((line) => {
-            line.classList.remove("active", "before-1", "before-2", "before-3", "after-1", "after-2", "after-3", "distant", "hidden");
+            line.classList.remove(
+                "active", "before-1", "before-2", "before-3", "before-4", "before-5", "before-6",
+                "after-1", "after-2", "after-3", "after-4", "after-5", "after-6",
+                "distant", "distant-up", "hidden"
+            );
 
             // 默认先将所有行设为不可见
             line.style.opacity = "0";
         });
 
-        // 获取容器的高度用于计算中心位置
-        const containerHeight = this.lyricsContainer.clientHeight;
+        // 计算行定位基准：容器中心在 scrollWrapper 坐标系中的位置
+        const containerRect = this.lyricsContainer.getBoundingClientRect();
+        const wrapperRect = this.scrollWrapper.getBoundingClientRect();
+        const centerY = containerRect.top + containerRect.height / 2 - wrapperRect.top;
 
         // 确保displayIndex在有效范围内
         if (displayIndex >= 0 && displayIndex < lyricLines.length) {
@@ -660,37 +666,32 @@ class LyricsPlayer {
 
             // 遍历所有行并更新位置
             lyricLines.forEach((line, index) => {
-                // 确定行是否在可见范围内
-                const isVisible = index >= startIdx && index <= endIdx;
+                const offset = index - displayIndex;
+                const isVisible = Math.abs(offset) <= 3;
 
-                // 设置可见性
+                // 可见性
                 line.style.opacity = isVisible ? "" : "0";
 
-                // 只在有激活字符且索引匹配时才将该行标记为active
+                // 统一定位：行位置由 top 绝对计算，transform 仅缩放（不参与位移，避免过渡卡残留值）
+                line.style.top = `${centerY - line.offsetHeight / 2 + offset * 60}px`;
+
+                // 清空位置类后按相对位置添加（保证过渡平滑）
+                line.classList.remove(
+                    "before-1", "before-2", "before-3", "before-4", "before-5", "before-6",
+                    "after-1", "after-2", "after-3", "after-4", "after-5", "after-6",
+                    "distant", "distant-up"
+                );
                 if (index === activeIndex && hasActiveChar) {
                     line.classList.add("active");
                 }
-
-                // 根据行与显示行的相对位置设置样式和位置
-                if (index === displayIndex) {
-                    line.style.top = `${containerHeight / 2 - line.offsetHeight / 2}px`;
-                } else if (index === displayIndex - 1) {
-                    line.classList.add("before-1");
-                } else if (index === displayIndex - 2) {
-                    line.classList.add("before-2");
-                } else if (index === displayIndex - 3) {
-                    line.classList.add("before-3");
-                } else if (index < displayIndex - 3) {
-                    line.classList.add("distant");
-                } else if (index === displayIndex + 1) {
-                    line.classList.add("after-1");
-                } else if (index === displayIndex + 2) {
-                    line.classList.add("after-2");
-                } else if (index === displayIndex + 3) {
-                    line.classList.add("after-3");
-                } else if (index > displayIndex + 3) {
-                    line.classList.add("distant");
-                }
+                if (offset === -1) line.classList.add("before-1");
+                else if (offset === -2) line.classList.add("before-2");
+                else if (offset === -3) line.classList.add("before-3");
+                else if (offset < -3) line.classList.add("distant-up");
+                else if (offset === 1) line.classList.add("after-1");
+                else if (offset === 2) line.classList.add("after-2");
+                else if (offset === 3) line.classList.add("after-3");
+                else if (offset > 3) line.classList.add("distant");
             });
         }
 
