@@ -173,7 +173,7 @@
 
 /* 单个字符动画增强 */
 .char {
-  white-space: normal;
+  white-space: pre-wrap;
   display: inline-block;
 }
 
