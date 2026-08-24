@@ -489,6 +489,12 @@ class LyricsPlayer {
         // 基本时间计算
         let currentTime = this.audio.currentTime * 1000; // 毫秒
 
+        // 应用用户设置的歌词偏移（毫秒，正数提前、负数延后）
+        const lyricOffset = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
+        if (lyricOffset !== 0) {
+            currentTime += lyricOffset;
+        }
+
         // 循环歌曲时间处理
         if (this.isLoopDetected && this.originalSongDuration && this.settingManager.getSetting("loopLyricsEnabled") === "true") {
             // 计算循环周期

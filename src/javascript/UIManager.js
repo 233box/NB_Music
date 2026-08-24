@@ -335,6 +335,24 @@ class UIManager {
             }
         });
 
+        // 歌词偏移设置控件
+        const offsetInput = document.getElementById("lyricOffsetInput");
+        const offsetApplyBtn = document.getElementById("lyricOffsetApply");
+        const offsetResetBtn = document.getElementById("lyricOffsetReset");
+        if (offsetInput && offsetApplyBtn && offsetResetBtn) {
+            offsetInput.value = this.settingManager.getSetting("lyricOffset") || 0;
+            offsetApplyBtn.addEventListener("click", () => {
+                const v = parseInt(offsetInput.value, 10) || 0;
+                this.settingManager.setSetting("lyricOffset", v);
+                this.showNotification(`歌词偏移已设为 ${v > 0 ? "+" : ""}${v}ms`, "success");
+            });
+            offsetResetBtn.addEventListener("click", () => {
+                this.settingManager.setSetting("lyricOffset", 0);
+                offsetInput.value = 0;
+                this.showNotification("歌词偏移已重置", "success");
+            });
+        }
+
         // 应用默认设置
         const lyricsEnabled = this.settingManager.getSetting("lyricsEnabled");
         if (lyricsEnabled === "true" || lyricsEnabled === true) {

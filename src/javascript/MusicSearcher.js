@@ -603,6 +603,96 @@ class MusicSearcher {
         return [bestAudio.baseUrl, bestAudio.backupUrl, cid];
     }
 
+    /**
+     * 清洗B站视频标题，提取可用于搜索的歌曲关键词
+     * @param {string} title
+     * @returns {{keyword: string, artist: string}}
+     */
+    extractSearchKeyword(title) {
+        if (!title || typeof title !== "string") return { keyword: "", artist: "" };
+        let t = title;
+        // 去掉【】[]（()）（）里的标签性内容
+        t = t.replace(/【[^】]*】/g, " ").replace(/\[[^\]]*\]/g, " ");
+        t = t.replace(/\([^)]*\)/g, " ").replace(/（[^）]*）/g, " ");
+        // 提取 " - 歌手" 后缀（中英文连字符、波浪线，支持多词歌手名）
+        let artist = "";
+        const dash = t.match(/\s*[-–—~]\s*([\u4e00-\u9fa5A-Za-z0-9·・ ]{1,40})$/);
+        if (dash) {
+            artist = dash[1];
+            t = t.slice(0, dash.index).trim();
+        }
+        // 去掉杂质词（整词匹配，避免误伤歌名内嵌子串）
+        const noise = /^(翻唱|完整版|现场版|演唱会|官方|Official|MV|PV|OP|ED|IN|主题曲|插曲|片头曲|片尾曲|伴奏|纯音乐|cover|歌ってみた|カバー|录音棚|Hi-res|Hires|4K|8K|修复|无损|高音质|现场|live|remix|feat\.?|ft\.?|字幕|歌词)$/i;
+        t = t.split(/\s+/)
+            .filter((w) => w && !noise.test(w))
+            .join(" ");
+        return { keyword: t.trim(), artist };
+    }
+
+    /**
+     * 判断搜索结果歌名与期望关键词的匹配度（0~1）
+     * 结果名含翻唱/改编标记时降权，避免匹配到翻唱版歌词
+     * @param {string} resultName
+     * @param {string} keyword
+     */
+    isTitleMatch(resultName, keyword) {
+        const a = String(resultName || "").toLowerCase().replace(/[\s（()）·・,，]/g, "");
+        const b = String(keyword || "").toLowerCase().replace(/[\s（()）·・,，]/g, "");
+        if (!a || !b) return 0;
+        let score;
+        if (a === b) {
+            score = 1;
+        } else if (a.includes(b) || b.includes(a)) {
+            score = 0.9;
+        } else {
+            const setA = new Set(a);
+            const setB = new Set(b);
+            let overlap = 0;
+            for (const ch of setB) if (setA.has(ch)) overlap++;
+            score = overlap / Math.min(setA.size, setB.size);
+        }
+        // 结果名含翻唱/改编标记（而关键词不含），降低置信度
+        if (/(翻唱|cover|ver\.|remix|伴奏|カバー|歌ってみた|カラオケ|feat\.?|ft\.?|featuring)/i.test(a) && !/(翻唱|cover|ver\.|remix|伴奏|カバー|歌ってみた|カラオケ|feat\.?|ft\.?|featuring)/i.test(b)) {
+            score *= 0.7;
+        }
+        return score;
+    }
+
+    /**
+     * 从网易云搜索结果中挑选匹配度最高的歌曲，低于阈值返回 null
+     * 歌名/歌手同时作为候选词（兼容 "歌名 - 歌手" 与 "艺人 - 歌名" 两种标题格式）
+     * @param {Array} songs
+     * @param {string} keyword
+     * @param {string} artist
+     */
+    pickBestSong(songs, keyword, artist = "") {
+        let best = null;
+        let bestScore = 0;
+        for (const song of (songs || []).slice(0, 5)) {
+            // 候选词：关键词 + 歌手名，分别匹配取最高
+            let score = 0;
+            const terms = [keyword, artist].filter(Boolean);
+            for (const term of terms) {
+                score = Math.max(score, this.isTitleMatch(song.name, term));
+            }
+            // 歌手辅助：期望歌手或关键词命中结果艺人时加分
+            if (song.artists) {
+                const songArtist = song.artists.map((a) => a.name).join("/").toLowerCase();
+                for (const term of [keyword, artist]) {
+                    if (term && songArtist.includes(term.toLowerCase())) {
+                        score = Math.min(1, score + 0.15);
+                        break;
+                    }
+                }
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                best = song;
+            }
+        }
+        return bestScore >= 0.8 ? best : null;
+    }
+
     async getLyrics(songName, bvid = null, cid = null, forceSource = null) {
         try {
             // 确定使用的歌词来源
@@ -627,15 +717,19 @@ class MusicSearcher {
                     let neteaseSuccess = false;
                     
                     try {
+                        const { keyword, artist } = this.extractSearchKeyword(songName);
+                        const searchKeywords = artist ? `${keyword} ${artist}` : keyword;
                         const searchResponse = await search({
-                            keywords: songName,
-                            limit: 1
+                            keywords: searchKeywords,
+                            limit: 5
                         });
                         
                         const searchResult = searchResponse.body;
                         if (searchResult.result && searchResult.result.songs && searchResult.result.songs.length > 0) {
-                            const songId = searchResult.result.songs[0].id;
-                            const yrcResponse = await lyric_new({ id: songId });
+                            const bestSong = this.pickBestSong(searchResult.result.songs, keyword, artist);
+                            if (bestSong) {
+                                const songId = bestSong.id;
+                                const yrcResponse = await lyric_new({ id: songId });
                             
                             if (yrcResponse.body) {
                                 const yrcLyrics = yrcResponse.body;
@@ -648,6 +742,7 @@ class MusicSearcher {
                                     // 缓存网易云歌词
                                     this.lyricsCache.netease[songName] = neteaseLyrics;
                                 }
+                            }
                             }
                         }
                     } catch (error) {
@@ -721,9 +816,11 @@ class MusicSearcher {
                     // 显示加载状态
                     this.showLoadingState(true);
 
+                    const { keyword, artist } = this.extractSearchKeyword(songName);
+                    const searchKeywords = artist ? `${keyword} ${artist}` : keyword;
                     const searchResponse = await search({
-                        keywords: songName,
-                        limit: 1
+                        keywords: searchKeywords,
+                        limit: 5
                     });
                     const searchResult = searchResponse.body;
                     if (!searchResult.result || !searchResult.result.songs || searchResult.result.songs.length === 0) {
@@ -736,7 +833,17 @@ class MusicSearcher {
                         return "暂无歌词，尽情欣赏音乐";
                     }
 
-                    const songId = searchResult.result.songs[0].id;
+                    // 从候选中挑选匹配度最高的歌曲，低于阈值则放弃（不硬上错歌词）
+                    const bestSong = this.pickBestSong(searchResult.result.songs, keyword, artist);
+                    if (!bestSong) {
+                        if (bvid && cid && lyricSource !== "netease") {
+                            return this.getLyrics(songName, bvid, cid, "bilibili");
+                        }
+                        this.showLoadingState(false);
+                        return "暂无歌词，尽情欣赏音乐";
+                    }
+
+                    const songId = bestSong.id;
                     const yrcResponse = await lyric_new({ id: songId });
 
                     if (!yrcResponse.body) {
