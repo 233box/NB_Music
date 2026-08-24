@@ -17,7 +17,7 @@
 }
 
 #lyrics-container:hover {
-  transform: scale(1.02);
+  opacity: 1;
 }
 
 /* 当父容器隐藏时保持歌词容器的布局 */
@@ -50,21 +50,18 @@
   line-height: 1.8;
   margin: 8px 0;
   min-height: 32px;
-  opacity: 0.6;
-  transform: scale(0.95);
-  transition: all 0.5s cubic-bezier(0.17, 0.84, 0.44, 1);
-  filter: blur(1px);
-  will-change: transform, opacity, filter, top;
+  opacity: 0.7;
+  transform: scale(1);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  will-change: transform, opacity;
   position: absolute; /* 使用绝对定位以便独立控制位置 */
   width: 100%;
-  transition: all 0.2s ease;
 }
 
 /* 当前播放的歌词行 */
 .lyric-line.active {
   opacity: 1;
-  font-weight: 500;
-  font-size: 18px;
+  font-weight: 600;
   color: var(--theme-2);
   text-shadow: 0 0 8px rgba(var(--theme-2-rgb), 0.3);
 }
@@ -146,15 +143,14 @@
 /* 激活的歌词行增强效果 */
 .lyric-line.active {
   opacity: 1;
-  transform: scale(1) translateY(0);
-  filter: blur(0) !important;
+  transform: scale(1.02) translateY(0);
   background: linear-gradient(90deg, var(--theme-1), var(--theme-2));
   -webkit-background-clip: text;
   background-clip: text;
   /* -webkit-text-fill-color: transparent; */
   z-index: 10;
   text-shadow: 0 2px 10px rgba(var(--theme-1-rgb), 0.2);
-  transition: all 0.5s var(--animation-timing-spring);
+  transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 /* 添加高亮线条 */
@@ -175,13 +171,13 @@
 }
 
 /* 歌词行位置变化效果增强 */
-.lyric-line.before-3 { opacity: 0.25; transform: translateY(-160px) scale(0.88); }
-.lyric-line.before-2 { opacity: 0.35; transform: translateY(-110px) scale(0.93); }
-.lyric-line.before-1 { opacity: 0.55; transform: translateY(-60px) scale(0.97); }
-.lyric-line.after-1 { opacity: 0.55; transform: translateY(60px) scale(0.97); }
-.lyric-line.after-2 { opacity: 0.35; transform: translateY(110px) scale(0.93); }
-.lyric-line.after-3 { opacity: 0.25; transform: translateY(160px) scale(0.88); }
-.lyric-line.distant { opacity: 0; transform: translateY(200px) scale(0.85); }
+.lyric-line.before-3 { opacity: 0.45; transform: translateY(-160px) scale(0.95); }
+.lyric-line.before-2 { opacity: 0.55; transform: translateY(-110px) scale(0.97); }
+.lyric-line.before-1 { opacity: 0.75; transform: translateY(-60px) scale(0.99); }
+.lyric-line.after-1 { opacity: 0.75; transform: translateY(60px) scale(0.99); }
+.lyric-line.after-2 { opacity: 0.55; transform: translateY(110px) scale(0.97); }
+.lyric-line.after-3 { opacity: 0.45; transform: translateY(160px) scale(0.95); }
+.lyric-line.distant { opacity: 0; transform: translateY(200px) scale(0.9); }
 
 /* 单个字符动画增强 */
 .char {
