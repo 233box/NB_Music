@@ -511,16 +511,21 @@ function createWindow() {
         win.webContents.send("window-restored");
     });
 
-    ipcMain.on("login-success", async (event, data) => {
+    ipcMain.on("login-success", async () => {
         try {
-            const { cookies } = data;
+            // 扫码登录凭证通过 Set-Cookie 存入 Chromium 会话，直接从会话读取
+            const cookies = await win.webContents.session.cookies.get({
+                url: "https://www.bilibili.com"
+            });
             if (!cookies || cookies.length === 0) {
                 throw new Error("未能获取到cookie");
             }
 
-            saveCookies(cookies.join(";") + ';nbmusic_loginmode=qrcode');
+            const cookieString = formatCookieString(cookies) + ";nbmusic_loginmode=qrcode";
 
-            setBilibiliRequestCookie(cookies.join(";") + ';nbmusic_loginmode=qrcode');
+            saveCookies(cookieString);
+
+            setBilibiliRequestCookie(cookieString);
 
             win.webContents.send("cookies-set", true);
         } catch (error) {
@@ -679,7 +684,10 @@ function formatCookieString(cookies) {
 app.whenReady().then(async () => {
     if (!app.isPackaged && process.argv[2] != "--no-reload") {
         require("electron-reload")(__dirname, {
-            electron: path.join(process.cwd(), "node_modules", ".bin", "electron")
+            electron:
+                process.platform === "win32"
+                    ? path.join(process.cwd(), "node_modules", "electron", "dist", "electron.exe")
+                    : path.join(process.cwd(), "node_modules", ".bin", "electron")
         });
     }
 

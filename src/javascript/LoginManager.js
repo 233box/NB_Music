@@ -197,7 +197,7 @@ class LoginManager {
 
     async generateQRCode() {
         try {
-            const response = await fetch("https://passport.bilibili.com/x/passport-login/web/qrcode/generate");
+            const response = await fetch("https://passport.bilibili.com/x/passport-login/web/qrcode/generate", { credentials: "include" });
             const data = await response.json();
 
             if (data.code === 0) {
@@ -231,7 +231,7 @@ class LoginManager {
 
     async pollLoginStatus() {
         try {
-            const response = await fetch(`https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=${this.qrcodeKey}`);
+            const response = await fetch(`https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=${this.qrcodeKey}`, { credentials: "include" });
             const data = await response.json();
 
             if (data.code === 0) {
@@ -241,15 +241,8 @@ class LoginManager {
                         this.qrcodeStatus.textContent = '登录成功，正在设置...';
                         this.clearPolling();
 
-                        // 获取所有的cookie
-                        const rawCookies = data.data.url.match(/[^?]*\?(.*)/)[1].split("&");
-                        const cookies = rawCookies.map((pair) => {
-                            const [name, value] = pair.split("=");
-                            return `${name}=${value}`;
-                        });
-
-                        // 发送给主进程设置
-                        ipcRenderer.send("login-success", { cookies });
+                        // 登录凭证通过 Set-Cookie 已存入会话，通知主进程读取保存
+                        ipcRenderer.send("login-success");
 
                         ipcRenderer.once('cookies-set-error', (_, error) => {
                             this.uiManager.showNotification('登录失败', 'error');
