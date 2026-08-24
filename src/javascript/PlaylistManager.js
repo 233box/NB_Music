@@ -622,6 +622,11 @@ class PlaylistManager {
         }
     }
     async updateUIForCurrentSong(song) {
+        // 通知歌词播放器当前歌曲（用于按曲记忆偏移）
+        if (this.lyricsPlayer && typeof this.lyricsPlayer.setCurrentSongInfo === "function") {
+            this.lyricsPlayer.setCurrentSongInfo(song);
+        }
+
         // 基础 UI 更新保持不变
         document.documentElement.style.setProperty("--bgul", "url(" + song.poster + ")");
         document.querySelector(".player-content .cover .cover-img").src = song.poster;

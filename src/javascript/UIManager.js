@@ -498,6 +498,9 @@ class UIManager {
         });
     }
     initializePlayerControls() {
+        // 歌词偏移微调控件（按曲记忆）
+        this.initLyricOffsetControl();
+
         // 进度条控制
         const progressBar = document.querySelector(".progress-bar");
         progressBar?.addEventListener("click", (e) => {
@@ -544,6 +547,30 @@ class UIManager {
         this.audioPlayer.audio.addEventListener("pause", () => {
             document.querySelector(".control>.buttons>.play").classList = "play paused";
         });
+    }
+
+    // 歌词偏移微调控件（按曲记忆）
+    initLyricOffsetControl() {
+        const minusBtn = document.getElementById("lyricOffsetMinus");
+        const plusBtn = document.getElementById("lyricOffsetPlus");
+        const offsetValueEl = document.getElementById("lyricOffsetValue");
+        if (!minusBtn || !plusBtn) return;
+
+        const updateDisplay = () => {
+            if (offsetValueEl && this.lyricsPlayer) {
+                offsetValueEl.textContent = `${this.lyricsPlayer.getCurrentLyricOffset()}ms`;
+            }
+        };
+        const adjust = (delta) => {
+            if (!this.lyricsPlayer) return;
+            const v = this.lyricsPlayer.adjustLyricOffset(delta);
+            updateDisplay();
+            this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
+        };
+
+        minusBtn.addEventListener("click", () => adjust(-100));
+        plusBtn.addEventListener("click", () => adjust(100));
+        updateDisplay();
     }
 
     initializePageEvents() {
@@ -616,6 +643,17 @@ class UIManager {
                 // 避免在输入框中按空格触发
                 e.preventDefault(); // 阻止页面滚动
                 this.audioPlayer.play();
+            }
+
+            // 中括号微调歌词偏移（本曲记忆）
+            if ((e.key === "[" || e.key === "]") && e.target.tagName !== "INPUT") {
+                if (this.lyricsPlayer) {
+                    const delta = e.key === "[" ? -100 : 100;
+                    const v = this.lyricsPlayer.adjustLyricOffset(delta);
+                    const valueEl = document.getElementById("lyricOffsetValue");
+                    if (valueEl) valueEl.textContent = `${v}ms`;
+                    this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
+                }
             }
         });
 
@@ -852,6 +890,12 @@ class UIManager {
         document.querySelector("#listname").textContent = this.playlistManager.playlistName;
         const playlistElement = document.querySelector("#playing-list");
         playlistElement.innerHTML = "";
+
+        // 歌词偏移显示跟随切歌更新
+        const offsetValueEl = document.getElementById("lyricOffsetValue");
+        if (offsetValueEl && this.lyricsPlayer) {
+            offsetValueEl.textContent = `${this.lyricsPlayer.getCurrentLyricOffset()}ms`;
+        }
 
         this.playlistManager.playlist.forEach((song) => {
             const div = this.createSongElement(song, song.bvid, {

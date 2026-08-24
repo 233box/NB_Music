@@ -20,7 +20,16 @@ class LyricsPlayer {
         this.previousActiveIndex = -1;
         this.desktopLyricsEnabled = false;
         this.currentSongInfo = null;
+        this.currentBvid = null;
         this.ipcRenderer = null;
+
+        // 按歌曲记忆的歌词偏移（毫秒）：{ bvid: ms }
+        this.perSongOffsets = {};
+        try {
+            this.perSongOffsets = JSON.parse(localStorage.getItem("nbmusic_lyric_offsets") || "{}") || {};
+        } catch (e) {
+            this.perSongOffsets = {};
+        }
 
         // 循环歌词同步相关属性
         this.isLoopDetected = false; // 是否检测到循环歌曲
@@ -489,8 +498,8 @@ class LyricsPlayer {
         // 基本时间计算
         let currentTime = this.audio.currentTime * 1000; // 毫秒
 
-        // 应用用户设置的歌词偏移（毫秒，正数提前、负数延后）
-        const lyricOffset = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
+        // 应用歌词偏移（全局 + 单曲微调，毫秒）
+        const lyricOffset = this.getCurrentLyricOffset();
         if (lyricOffset !== 0) {
             currentTime += lyricOffset;
         }
@@ -1052,10 +1061,37 @@ class LyricsPlayer {
     // 设置当前播放的歌曲信息
     setCurrentSongInfo(songInfo) {
         this.currentSongInfo = songInfo;
+        this.currentBvid = songInfo?.bvid || null;
         // 如果桌面歌词已启用，同步信息
         if (this.desktopLyricsEnabled) {
             this.syncDesktopLyrics();
         }
+    }
+
+    // 当前歌曲总偏移 = 全局默认 + 单曲微调（毫秒）
+    getCurrentLyricOffset() {
+        const global = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
+        const perSong = this.currentBvid ? this.perSongOffsets[this.currentBvid] || 0 : 0;
+        return global + perSong;
+    }
+
+    // 微调当前歌曲偏移，返回新的总偏移（毫秒）
+    adjustLyricOffset(delta) {
+        if (!this.currentBvid) {
+            // 无歌曲上下文时调整全局偏移
+            const global = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
+            const next = global + delta;
+            this.settingManager?.setSetting("lyricOffset", next);
+            return next;
+        }
+        const cur = this.perSongOffsets[this.currentBvid] || 0;
+        this.perSongOffsets[this.currentBvid] = cur + delta;
+        try {
+            localStorage.setItem("nbmusic_lyric_offsets", JSON.stringify(this.perSongOffsets));
+        } catch (e) {
+            console.error("保存歌词偏移失败:", e);
+        }
+        return this.getCurrentLyricOffset();
     }
 
     // 添加启动后台同步的方法
