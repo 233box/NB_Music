@@ -429,15 +429,15 @@
 .save-position-btn:hover {
   background: var(--bg80);
 }
-/* 歌词偏移微调控件（悬浮于歌词区右下角） */
+/* 歌词偏移微调控件（悬浮于歌词区左上角） */
 .lyric-offset-control {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  top: 12px;
+  left: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
-  opacity: 0.35;
+  opacity: 0.75;
   transition: opacity 0.3s ease;
   z-index: 10;
 }

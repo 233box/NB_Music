@@ -568,8 +568,8 @@ class UIManager {
             this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
         };
 
-        minusBtn.addEventListener("click", () => adjust(-100));
-        plusBtn.addEventListener("click", () => adjust(100));
+        minusBtn.addEventListener("click", () => adjust(-500));
+        plusBtn.addEventListener("click", () => adjust(500));
         updateDisplay();
     }
 
@@ -648,7 +648,7 @@ class UIManager {
             // 中括号微调歌词偏移（本曲记忆）
             if ((e.key === "[" || e.key === "]") && e.target.tagName !== "INPUT") {
                 if (this.lyricsPlayer) {
-                    const delta = e.key === "[" ? -100 : 100;
+                    const delta = e.key === "[" ? -500 : 500;
                     const v = this.lyricsPlayer.adjustLyricOffset(delta);
                     const valueEl = document.getElementById("lyricOffsetValue");
                     if (valueEl) valueEl.textContent = `${v}ms`;
