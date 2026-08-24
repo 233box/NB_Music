@@ -33,23 +33,31 @@
   width: 100%;
   position: relative;
   height: 100%;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.lyrics-scroll-wrapper::-webkit-scrollbar {
+  display: none;
 }
 
 /* 歌词行样式 */
 .lyric-line {
   font-size: var(--lyric-line-font-size);
   line-height: 1.8;
-  margin: 8px 0;
+  margin: 20px 0;
   min-height: 32px;
   opacity: 0.7;
-  transform: scale(1);
-  transition: transform 0.25s ease, opacity 0.25s ease;
-  will-change: transform, opacity;
-  position: absolute; /* 使用绝对定位以便独立控制位置 */
-  width: 100%;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  will-change: opacity;
 }
 
-/* 当前播放的歌词行 */
+/* 当前播放的歌词行（滚动方案：行固定，仅高亮） */
 .lyric-line.active {
   opacity: 1;
   font-weight: 600;
@@ -117,7 +125,7 @@
 
 /* 初始布局过渡效果 */
 .lyric-line.initial {
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
 }
 
 /* 确保在父容器隐藏时保持行的位置 */
@@ -134,14 +142,6 @@
 /* 激活的歌词行增强效果 */
 .lyric-line.active {
   opacity: 1;
-  transform: scale(1.02) translateY(0);
-  background: linear-gradient(90deg, var(--theme-1), var(--theme-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  /* -webkit-text-fill-color: transparent; */
-  z-index: 10;
-  text-shadow: 0 2px 10px rgba(var(--theme-1-rgb), 0.2);
-  transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 /* 添加高亮线条 */
@@ -173,19 +173,15 @@
 
 /* 单个字符动画增强 */
 .char {
-  white-space: pre;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: center;
+  white-space: normal;
   display: inline-block;
 }
 
 .char.active {
   filter: brightness(var(--brightness));
   color: var(--text);
-  font-size: 1.25em;
   opacity: 1;
   text-shadow: 0 0 8px var(--rgba-13);
-  animation: charPulse 0.3s var(--animation-timing-bounce);
   background: linear-gradient(90deg, var(--theme-1), var(--theme-2));
   -webkit-background-clip: text;
   background-clip: text;

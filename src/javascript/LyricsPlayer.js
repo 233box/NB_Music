@@ -146,11 +146,11 @@ class LyricsPlayer {
     init() {
         this.lyricsContainer.style.position = "relative";
         this.scrollWrapper.innerHTML = "";
+        // 滚动容器从顶部开始（歌词按自然流排列）
+        this.scrollWrapper.scrollTop = 0;
 
-        // 创建歌词行元素
-        let lyricIndex = 0; // 跟踪实际歌词的索引
-        let visibleLyricCount = 0; // 记录显示的歌词行数量
-        const maxVisibleLyrics = 7; // 初始状态下最多显示的歌词行数
+        // 创建歌词行元素（滚动方案：行按文档流排列，滚动容器负责定位）
+        let lyricIndex = 0;
 
         this.parsedData.forEach((data) => {
             const element = data.type === "metadata" ? this.createMetadataElement(data) : this.createLyricElement(data);
@@ -158,83 +158,15 @@ class LyricsPlayer {
                 // 添加数据索引属性，便于调试和确保索引正确
                 element.setAttribute("data-lyric-index", lyricIndex);
                 element.setAttribute("data-time", `[${Math.floor(data.lineStart / 60000)}:${((data.lineStart % 60000) / 1000).toFixed(2)}]`);
-
-                // 添加初始过渡动画类
-                element.classList.add("initial");
-
-                // 只显示前maxVisibleLyrics行，其余隐藏
-                if (visibleLyricCount < maxVisibleLyrics) {
-                    // 根据位置分配样式类和位置
-                    if (visibleLyricCount === 0) {
-                        // 第一行放在中央
-                        element.style.top = `50%`;
-                        element.style.transform = `translateY(-50%)`;
-                    } else if (visibleLyricCount < maxVisibleLyrics) {
-                        // 后面的行依次向下排列
-                        element.style.top = `${50 + visibleLyricCount * 60}px`;
-                        element.classList.add(`after-${visibleLyricCount}`);
-                    }
-
-                    visibleLyricCount++;
-                } else {
-                    // 超过最大显示数量的歌词行初始设为不可见
-                    element.style.opacity = "0";
-                    element.style.top = "200%";
-                    element.classList.add("hidden");
-                }
-
-                // 延迟一小段时间后移除初始类，以确保过渡动画生效
-                setTimeout(() => {
-                    element.classList.remove("initial");
-                }, 500);
-
                 lyricIndex++;
             }
             this.scrollWrapper.appendChild(element);
         });
-
-        // 如果存在歌词，初始显示第一屏
-        if (this.parsedData.some((data) => data.type === "lyric")) {
-            setTimeout(() => {
-                this.setupInitialView();
-            }, 100);
-        }
     }
 
     setupInitialView() {
-        const lyricLines = Array.from(this.scrollWrapper.querySelectorAll(".lyric-line"));
-        const containerHeight = this.lyricsContainer.clientHeight;
-
-        // 计算中心点位置
-        const centerY = containerHeight / 2;
-
-        // 最多显示7行
-        const maxVisible = 7;
-        const visibleLines = lyricLines.slice(0, maxVisible);
-
-        // 先隐藏所有行
-        lyricLines.forEach((line) => {
-            line.classList.remove("active", "before-1", "before-2", "before-3", "after-1", "after-2", "after-3", "distant");
-            line.classList.add("distant");
-            line.style.opacity = "0";
-        });
-
-        // 设置可见行的位置
-        visibleLines.forEach((line, index) => {
-            line.classList.remove("distant");
-            line.style.opacity = "";
-
-            if (index === 0) {
-                // 第一行放在中央
-                line.style.top = `${centerY - line.offsetHeight / 2}px`;
-            } else {
-                // 后面的行依次往下
-                line.classList.add(`after-${index}`);
-                line.style.top = `${centerY - line.offsetHeight / 2 + index * 60}px`;
-            }
-        });
-
-        // 标记我们已经显示了初始视图
+        // 滚动方案：初始状态滚动到顶部，第一行自然可见
+        this.scrollWrapper.scrollTop = 0;
         this.initialViewDisplayed = true;
     }
 
@@ -486,14 +418,17 @@ class LyricsPlayer {
         this.completedLines.clear();
         this.previousActiveIndex = -1;
 
+        // 快进/拖动时瞬间定位，禁用平滑滚动（避免长距离滚动动画）
+        // 恢复用宏任务：确保本帧 animate 的 scrollTop 赋值在 auto 模式下先完成
+        this.scrollWrapper.style.scrollBehavior = "auto";
+
         Array.from(this.scrollWrapper.querySelectorAll(".char")).forEach((char) => {
             char.classList.remove("active", "completed");
         });
 
-        // 重置行位置类
-        Array.from(this.scrollWrapper.querySelectorAll(".lyric-line")).forEach((line) => {
-            line.classList.remove("active", "before-1", "before-2", "before-3", "after-1", "after-2", "after-3", "distant");
-        });
+        setTimeout(() => {
+            this.scrollWrapper.style.scrollBehavior = "";
+        }, 200);
     }
 
     animate() {
@@ -635,67 +570,20 @@ class LyricsPlayer {
         // 标记我们已经有过激活行
         this.hadActiveLines = true;
 
-        // 如果没有激活行但有上一次激活行，则使用上一次激活行的位置，但不应用激活样式
-        const displayIndex = activeIndex !== -1 ? activeIndex : this.activeLineIndex;
-
         // 只获取歌词行元素，排除metadata元素
         const lyricLines = Array.from(this.scrollWrapper.querySelectorAll(".lyric-line"));
 
-        // 重置所有行的样式
-        lyricLines.forEach((line) => {
-            line.classList.remove(
-                "active", "before-1", "before-2", "before-3", "before-4", "before-5", "before-6",
-                "after-1", "after-2", "after-3", "after-4", "after-5", "after-6",
-                "distant", "distant-up", "hidden"
-            );
-
-            // 默认先将所有行设为不可见
-            line.style.opacity = "0";
+        // 滚动方案：行在文档流中固定排列，只切换高亮，位置由滚动容器控制
+        lyricLines.forEach((line, index) => {
+            line.classList.toggle("active", index === activeIndex && hasActiveChar);
         });
 
-        // 计算行定位基准：容器中心在 scrollWrapper 坐标系中的位置
-        const containerRect = this.lyricsContainer.getBoundingClientRect();
-        const wrapperRect = this.scrollWrapper.getBoundingClientRect();
-        const centerY = containerRect.top + containerRect.height / 2 - wrapperRect.top;
-
-        // 确保displayIndex在有效范围内
-        if (displayIndex >= 0 && displayIndex < lyricLines.length) {
-            // 计算要显示的行索引范围
-            const startIdx = Math.max(0, displayIndex - 3);
-            const endIdx = Math.min(lyricLines.length - 1, displayIndex + 3);
-
-            // 遍历所有行并更新位置
-            lyricLines.forEach((line, index) => {
-                const offset = index - displayIndex;
-                const isVisible = Math.abs(offset) <= 3;
-
-                // 可见性
-                line.style.opacity = isVisible ? "" : "0";
-
-                // 统一定位：行位置由 top 绝对计算，transform 仅缩放（不参与位移，避免过渡卡残留值）
-                line.style.top = `${centerY - line.offsetHeight / 2 + offset * 60}px`;
-
-                // 清空位置类后按相对位置添加（保证过渡平滑）
-                line.classList.remove(
-                    "before-1", "before-2", "before-3", "before-4", "before-5", "before-6",
-                    "after-1", "after-2", "after-3", "after-4", "after-5", "after-6",
-                    "distant", "distant-up"
-                );
-                if (index === activeIndex && hasActiveChar) {
-                    line.classList.add("active");
-                }
-                if (offset === -1) line.classList.add("before-1");
-                else if (offset === -2) line.classList.add("before-2");
-                else if (offset === -3) line.classList.add("before-3");
-                else if (offset < -3) line.classList.add("distant-up");
-                else if (offset === 1) line.classList.add("after-1");
-                else if (offset === 2) line.classList.add("after-2");
-                else if (offset === 3) line.classList.add("after-3");
-                else if (offset > 3) line.classList.add("distant");
-            });
+        // 滚动到激活行居中（首尾行不超过边界）
+        if (activeIndex >= 0 && activeIndex < lyricLines.length) {
+            const targetLine = lyricLines[activeIndex];
+            const targetScrollTop = targetLine.offsetTop - this.scrollWrapper.clientHeight / 2 + targetLine.offsetHeight / 2;
+            this.scrollWrapper.scrollTop = Math.max(0, targetScrollTop);
         }
-
-        // 平滑跟随：所有行随 transition 同步移动，无瀑布延迟
     }
 
     // 对单个行应用瀑布效果
