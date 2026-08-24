@@ -1082,16 +1082,34 @@ class LyricsPlayer {
             const global = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
             const next = global + delta;
             this.settingManager?.setSetting("lyricOffset", next);
-            return next;
+        } else {
+            const cur = this.perSongOffsets[this.currentBvid] || 0;
+            this.perSongOffsets[this.currentBvid] = cur + delta;
+            try {
+                localStorage.setItem("nbmusic_lyric_offsets", JSON.stringify(this.perSongOffsets));
+            } catch (e) {
+                console.error("保存歌词偏移失败:", e);
+            }
         }
-        const cur = this.perSongOffsets[this.currentBvid] || 0;
-        this.perSongOffsets[this.currentBvid] = cur + delta;
-        try {
-            localStorage.setItem("nbmusic_lyric_offsets", JSON.stringify(this.perSongOffsets));
-        } catch (e) {
-            console.error("保存歌词偏移失败:", e);
+
+        // 暂停时动画循环已停止，手动刷新一次让偏移效果立即可见
+        if (this.audio.paused && !this.animationFrame) {
+            this.start();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => this.stop());
+            });
         }
+
         return this.getCurrentLyricOffset();
+    }
+
+    // 暂停时手动刷新歌词高亮（如切歌、调整偏移后）
+    refreshLyrics() {
+        if (this.animationFrame) return;
+        this.start();
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => this.stop());
+        });
     }
 
     // 添加启动后台同步的方法
