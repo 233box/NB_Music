@@ -23,7 +23,6 @@ class SettingManager {
 
         lyricsEnabled: true,
         lyricSource: "netease", // 歌词来源 可选值: netease(网易云), bilibili(B站字幕), smart(智能获取)
-        lyricOffset: 0, // 歌词时间偏移（毫秒，正数提前、负数延后）
         autoPlayOnStartup: false, // 自动播放
         loopLyricsEnabled: true, // 循环歌单歌词同步功能 默认开启
         desktopLyricsEnabled: false,

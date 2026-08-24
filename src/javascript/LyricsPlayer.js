@@ -1039,28 +1039,22 @@ class LyricsPlayer {
         }
     }
 
-    // 当前歌曲总偏移 = 全局默认 + 单曲微调（毫秒）
+    // 当前歌曲偏移（毫秒，仅单曲记忆）
     getCurrentLyricOffset() {
-        const global = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
-        const perSong = this.currentBvid ? this.perSongOffsets[this.currentBvid] || 0 : 0;
-        return global + perSong;
+        return this.currentBvid ? this.perSongOffsets[this.currentBvid] || 0 : 0;
     }
 
-    // 微调当前歌曲偏移，返回新的总偏移（毫秒）
+    // 微调当前歌曲偏移，返回新的偏移（毫秒）
     adjustLyricOffset(delta) {
         if (!this.currentBvid) {
-            // 无歌曲上下文时调整全局偏移
-            const global = parseInt(this.settingManager?.getSetting("lyricOffset")) || 0;
-            const next = global + delta;
-            this.settingManager?.setSetting("lyricOffset", next);
-        } else {
-            const cur = this.perSongOffsets[this.currentBvid] || 0;
-            this.perSongOffsets[this.currentBvid] = cur + delta;
-            try {
-                localStorage.setItem("nbmusic_lyric_offsets", JSON.stringify(this.perSongOffsets));
-            } catch (e) {
-                console.error("保存歌词偏移失败:", e);
-            }
+            return 0; // 无歌曲上下文时不做调整
+        }
+        const cur = this.perSongOffsets[this.currentBvid] || 0;
+        this.perSongOffsets[this.currentBvid] = cur + delta;
+        try {
+            localStorage.setItem("nbmusic_lyric_offsets", JSON.stringify(this.perSongOffsets));
+        } catch (e) {
+            console.error("保存歌词偏移失败:", e);
         }
 
         // 暂停时动画循环已停止，手动刷新一次让偏移效果立即可见

@@ -98,51 +98,6 @@
 /* 设置值区域 */
 .setting-value {
   display: flex;
-  align-items: center;
-}
-
-/* 歌词偏移输入控件 */
-.setting-input {
-  width: 96px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border-1);
-  background: var(--color-14);
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.setting-input:focus {
-  border-color: var(--theme-1);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-1) 20%, transparent);
-}
-
-.setting-btn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-14);
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.setting-btn:hover {
-  background: var(--rgba-10);
-  transform: translateY(-1px);
-}
-
-.setting-btn.ghost {
-  background: transparent;
-  border: 1px solid var(--border-1);
-}
-
-.lyric-offset {
-  gap: 8px;
 }
 
 /* 导航组件样式 - 升级版 */

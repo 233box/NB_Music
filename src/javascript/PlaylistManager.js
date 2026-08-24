@@ -625,6 +625,10 @@ class PlaylistManager {
         // 通知歌词播放器当前歌曲（用于按曲记忆偏移）
         if (this.lyricsPlayer && typeof this.lyricsPlayer.setCurrentSongInfo === "function") {
             this.lyricsPlayer.setCurrentSongInfo(song);
+            // 刷新歌词偏移显示（跟随切歌，不依赖播放事件）
+            if (this.uiManager && typeof this.uiManager.updateLyricOffsetDisplay === "function") {
+                this.uiManager.updateLyricOffsetDisplay();
+            }
         }
 
         // 基础 UI 更新保持不变

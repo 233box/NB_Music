@@ -335,23 +335,7 @@ class UIManager {
             }
         });
 
-        // 歌词偏移设置控件
-        const offsetInput = document.getElementById("lyricOffsetInput");
-        const offsetApplyBtn = document.getElementById("lyricOffsetApply");
-        const offsetResetBtn = document.getElementById("lyricOffsetReset");
-        if (offsetInput && offsetApplyBtn && offsetResetBtn) {
-            offsetInput.value = this.settingManager.getSetting("lyricOffset") || 0;
-            offsetApplyBtn.addEventListener("click", () => {
-                const v = parseInt(offsetInput.value, 10) || 0;
-                this.settingManager.setSetting("lyricOffset", v);
-                this.showNotification(`歌词偏移已设为 ${v > 0 ? "+" : ""}${v}ms`, "success");
-            });
-            offsetResetBtn.addEventListener("click", () => {
-                this.settingManager.setSetting("lyricOffset", 0);
-                offsetInput.value = 0;
-                this.showNotification("歌词偏移已重置", "success");
-            });
-        }
+        // 歌词偏移由播放页控件按曲调节（无全局设置）
 
         // 应用默认设置
         const lyricsEnabled = this.settingManager.getSetting("lyricsEnabled");
@@ -542,6 +526,8 @@ class UIManager {
         // 播放状态图标更新
         this.audioPlayer.audio.addEventListener("play", () => {
             document.querySelector(".control>.buttons>.play").classList = "play played";
+            // 每次开始播放/切歌都刷新歌词偏移显示（currentBvid 此时已就绪）
+            this.updateLyricOffsetDisplay();
         });
 
         this.audioPlayer.audio.addEventListener("pause", () => {
@@ -553,24 +539,26 @@ class UIManager {
     initLyricOffsetControl() {
         const minusBtn = document.getElementById("lyricOffsetMinus");
         const plusBtn = document.getElementById("lyricOffsetPlus");
-        const offsetValueEl = document.getElementById("lyricOffsetValue");
         if (!minusBtn || !plusBtn) return;
 
-        const updateDisplay = () => {
-            if (offsetValueEl && this.lyricsPlayer) {
-                offsetValueEl.textContent = `${this.lyricsPlayer.getCurrentLyricOffset()}ms`;
-            }
-        };
         const adjust = (delta) => {
             if (!this.lyricsPlayer) return;
             const v = this.lyricsPlayer.adjustLyricOffset(delta);
-            updateDisplay();
+            this.updateLyricOffsetDisplay();
             this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
         };
 
         minusBtn.addEventListener("click", () => adjust(-100));
         plusBtn.addEventListener("click", () => adjust(100));
-        updateDisplay();
+        this.updateLyricOffsetDisplay();
+    }
+
+    // 更新歌词偏移显示（跟随当前播放歌曲）
+    updateLyricOffsetDisplay() {
+        const offsetValueEl = document.getElementById("lyricOffsetValue");
+        if (offsetValueEl && this.lyricsPlayer) {
+            offsetValueEl.textContent = `${this.lyricsPlayer.getCurrentLyricOffset()}ms`;
+        }
     }
 
     initializePageEvents() {
@@ -892,10 +880,7 @@ class UIManager {
         playlistElement.innerHTML = "";
 
         // 歌词偏移显示跟随切歌更新
-        const offsetValueEl = document.getElementById("lyricOffsetValue");
-        if (offsetValueEl && this.lyricsPlayer) {
-            offsetValueEl.textContent = `${this.lyricsPlayer.getCurrentLyricOffset()}ms`;
-        }
+        this.updateLyricOffsetDisplay();
 
         this.playlistManager.playlist.forEach((song) => {
             const div = this.createSongElement(song, song.bvid, {
