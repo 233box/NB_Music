@@ -180,6 +180,7 @@
 .char.active {
   filter: brightness(var(--brightness));
   color: var(--text);
+  font-size: 1.15em;
   opacity: 1;
   text-shadow: 0 0 8px var(--rgba-13);
   background: linear-gradient(90deg, var(--theme-1), var(--theme-2));
