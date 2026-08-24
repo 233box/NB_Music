@@ -26,6 +26,7 @@
     transform: translateX(50px);
     transition: all 0.4s var(--animation-timing-bounce);
     animation: notificationEnter 0.5s var(--animation-timing-bounce) forwards;
+    cursor: pointer;
 
     &.warning {
         border-left: 4px solid var(--warning);

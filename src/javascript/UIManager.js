@@ -977,9 +977,10 @@ class UIManager {
         // 5. 添加到容器
         container.appendChild(notification);
 
-        // 6. 如果不是进度通知，3秒后自动移除
+        // 6. 如果不是进度通知，3秒后自动移除；点击可提前关闭
         if (!showProgress) {
-            setTimeout(() => {
+            const removeNotification = () => {
+                if (notification.classList.contains("notification-fadeout")) return;
                 notification.classList.add("notification-fadeout");
                 notification.addEventListener(
                     "animationend",
@@ -992,7 +993,9 @@ class UIManager {
                     },
                     { once: true }
                 );
-            }, 3000);
+            };
+            setTimeout(removeNotification, 3000);
+            notification.addEventListener("click", removeNotification);
         }
 
         // 添加动画类
