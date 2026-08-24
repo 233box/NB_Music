@@ -27,6 +27,8 @@ body {
   overflow: hidden;
   position: fixed;
   background-size: cover;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 主内容布局 */
@@ -34,7 +36,8 @@ body {
   display: grid;
   grid-template-columns: var(--sidebar-width, 260px) 1fr;
   grid-template-rows: auto 1fr;
-  height: calc(100vh - 48px);
+  flex: 1;
+  min-height: 0;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   background: var(--mica);
