@@ -38,7 +38,7 @@
   /* 字体相关 */
   --font-family-custom: 'HarmonyOS_Sans';
   --font-family-fallback: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell;
-  --lyric-line-font-size: 24px;
+  --lyric-line-font-size: 28px;
 }
 
 /* 深色主题变量 */
