@@ -10,7 +10,7 @@
   <div id="lyrics-container">
     <div class="lyrics-content">
       <div class="current-line">NB Music 桌面歌词</div>
-      <div class="next-line">正在等待播放...</div>
+      <div class="translation-line"></div>
     </div>
   </div>
 
@@ -21,7 +21,7 @@
 
     const lyricsContent = document.querySelector('.lyrics-content');
     const curLineEl = document.querySelector('.current-line');
-    const nextLineEl = document.querySelector('.next-line');
+    const transLineEl = document.querySelector('.translation-line');
     let lastUpdateTime = Date.now();
 
     // 锁定状态（由主进程同步）：锁定=穿透不可拖；未锁定=可拖动、控制条跟随
@@ -58,20 +58,20 @@
         (Math.sin(Date.now() / 500) + 1) / 4 + 0.25;
     }, 100);
 
-    // 监听来自主窗口的歌词更新
+    // 监听来自主窗口的歌词更新（仅当前行 + 翻译）
     ipcRenderer.on('update-desktop-lyrics', (event, data) => {
-      const { currentLine, nextLine } = data;
+      const { currentLine, currentTranslation } = data;
       lastUpdateTime = Date.now();
 
       const newCur = currentLine || 'NB Music 桌面歌词';
-      const newNext = nextLine || '正在等待播放...';
+      const newTrans = (currentTranslation || '').trim();
 
-      // 仅当歌词文本真的变化时才触发动画
-      if (curLineEl.textContent !== newCur || nextLineEl.textContent !== newNext) {
-        lyricsContent.classList.add('updating');
-        setTimeout(() => lyricsContent.classList.remove('updating'), 300);
+      // 仅当歌词文本真的变化时才更新
+      if (curLineEl.textContent !== newCur) {
         curLineEl.textContent = newCur;
-        nextLineEl.textContent = newNext;
+      }
+      if (transLineEl.textContent !== newTrans) {
+        transLineEl.textContent = newTrans;
       }
     });
 
@@ -97,6 +97,12 @@
       }
       if (style.blurAmount) {
         root.style.setProperty('--blur-amount', `${style.blurAmount}px`);
+      }
+      if (style.desktopLyricsColor) {
+        root.style.setProperty('--current-line-color', style.desktopLyricsColor);
+      }
+      if (style.desktopLyricsTranslationColor) {
+        root.style.setProperty('--translation-line-color', style.desktopLyricsTranslationColor);
       }
     });
 

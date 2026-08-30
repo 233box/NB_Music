@@ -355,12 +355,26 @@ function createDesktopLyricsWindow() {
         return desktopLyricsControlWindow;
     }
 
+    // 读取记忆的窗口位置（拖动后保存于 userData/desktop-lyrics-pos.json）
+    let savedLyricsPos = null;
+    let savedControlPos = null;
+    try {
+        const posFile = path.join(app.getPath("userData"), "desktop-lyrics-pos.json");
+        if (fs.existsSync(posFile)) {
+            const saved = JSON.parse(fs.readFileSync(posFile, "utf8"));
+            if (saved.lyrics && typeof saved.lyrics.x === "number") savedLyricsPos = saved.lyrics;
+            if (saved.control && typeof saved.control.x === "number") savedControlPos = saved.control;
+        }
+    } catch (e) {
+        console.error("读取桌面歌词位置失败", e);
+    }
+
     // 歌词窗口（独立，纯展示；未锁定可拖，锁定时穿透）
     desktopLyricsWindow = new BrowserWindow({
         width: 800,
         height: 100,
-        x: 200,
-        y: 100,
+        x: savedLyricsPos ? savedLyricsPos.x : 200,
+        y: savedLyricsPos ? savedLyricsPos.y : 100,
         frame: false,
         transparent: true,
         backgroundColor: "#00000000",
@@ -391,8 +405,8 @@ function createDesktopLyricsWindow() {
     desktopLyricsControlWindow = new BrowserWindow({
         width: 300,
         height: 52,
-        x: 200 + LYRICS_CONTROL_OFF_X,
-        y: 100 + LYRICS_CONTROL_OFF_Y,
+        x: savedControlPos ? savedControlPos.x : 200 + LYRICS_CONTROL_OFF_X,
+        y: savedControlPos ? savedControlPos.y : 100 + LYRICS_CONTROL_OFF_Y,
         frame: false,
         transparent: true,
         backgroundColor: "#00000000",
@@ -856,6 +870,13 @@ function setupIPC() {
         }
     });
 
+    // 桌面歌词颜色设置变化：通知主窗口刷新桌面歌词样式
+    ipcMain.on("desktop-lyrics-color-changed", () => {
+        if (global.mainWindow) {
+            global.mainWindow.webContents.send("desktop-lyrics-color-refresh");
+        }
+    });
+
     ipcMain.on("desktop-lyrics-toggle-play", () => {
         if (global.mainWindow) {
             global.mainWindow.webContents.send("desktop-lyrics-control", "toggle-play");
@@ -963,6 +984,22 @@ function setupIPC() {
             lyricsDragTimer = null;
         }
         lyricsDragState = null;
+        // 记忆两窗口位置（应用重启后恢复）
+        try {
+            const posFile = path.join(app.getPath("userData"), "desktop-lyrics-pos.json");
+            const data = {};
+            if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
+                const lb = desktopLyricsWindow.getBounds();
+                data.lyrics = { x: lb.x, y: lb.y };
+            }
+            if (desktopLyricsControlWindow && !desktopLyricsControlWindow.isDestroyed()) {
+                const cb = desktopLyricsControlWindow.getBounds();
+                data.control = { x: cb.x, y: cb.y };
+            }
+            fs.writeFileSync(posFile, JSON.stringify(data));
+        } catch (e) {
+            console.error("保存桌面歌词位置失败", e);
+        }
     });
 
     ipcMain.on("desktop-lyrics-toggle-pin", () => {

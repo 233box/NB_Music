@@ -26,6 +26,8 @@ class SettingManager {
         autoPlayOnStartup: false, // 自动播放
         loopLyricsEnabled: true, // 循环歌单歌词同步功能 默认开启
         desktopLyricsEnabled: false,
+        desktopLyricsColor: "#7eb8ff", // 桌面歌词当前行颜色
+        desktopLyricsTranslationColor: "#aab2c0", // 桌面歌词翻译行颜色
         fadeEnabled: true, // 音频淡入淡出效果
 
         lyricSearchType: "custom",
@@ -233,6 +235,39 @@ class SettingManager {
         // 初始应用主题色
         this.applyThemeColors();
 
+        // 桌面歌词颜色选择器
+        const desktopLyricsColorPicker = document.getElementById("desktopLyricsColor");
+        const desktopLyricsTransColorPicker = document.getElementById("desktopLyricsTranslationColor");
+
+        if (desktopLyricsColorPicker) {
+            desktopLyricsColorPicker.value = this.settings.desktopLyricsColor;
+            desktopLyricsColorPicker.addEventListener("change", (e) => {
+                this.setSetting("desktopLyricsColor", e.target.value);
+                this.notifyDesktopLyricsStyleRefresh();
+            });
+        }
+
+        if (desktopLyricsTransColorPicker) {
+            desktopLyricsTransColorPicker.value = this.settings.desktopLyricsTranslationColor;
+            desktopLyricsTransColorPicker.addEventListener("change", (e) => {
+                this.setSetting("desktopLyricsTranslationColor", e.target.value);
+                this.notifyDesktopLyricsStyleRefresh();
+            });
+        }
+
+        const resetDesktopLyricsColorsBtn = document.getElementById("resetDesktopLyricsColors");
+        if (resetDesktopLyricsColorsBtn) {
+            resetDesktopLyricsColorsBtn.addEventListener("click", () => {
+                const defLine = "#7eb8ff";
+                const defTrans = "#aab2c0";
+                this.setSetting("desktopLyricsColor", defLine);
+                this.setSetting("desktopLyricsTranslationColor", defTrans);
+                if (desktopLyricsColorPicker) desktopLyricsColorPicker.value = defLine;
+                if (desktopLyricsTransColorPicker) desktopLyricsTransColorPicker.value = defTrans;
+                this.notifyDesktopLyricsStyleRefresh();
+            });
+        }
+
         this.sliderSetting(
             "micaOpacity",
             "50%",
@@ -298,6 +333,17 @@ class SettingManager {
         const root = document.documentElement;
         root.style.setProperty("--primary-color", this.settings.primaryColor);
         root.style.setProperty("--secondary-color", this.settings.secondaryColor);
+    }
+
+    // 桌面歌词颜色变化：通知主窗口 LyricsPlayer 刷新桌面歌词样式
+    notifyDesktopLyricsStyleRefresh() {
+        try {
+            if (this.ipcRenderer) {
+                this.ipcRenderer.send("desktop-lyrics-color-changed");
+            }
+        } catch (e) {
+            console.error("通知桌面歌词样式刷新失败", e);
+        }
     }
 
     applyMicaOpacity() {

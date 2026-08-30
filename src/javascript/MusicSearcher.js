@@ -853,7 +853,18 @@ class MusicSearcher {
                     }
 
                     const yrcLyrics = yrcResponse.body;
-                    const lyrics = yrcLyrics.yrc ? yrcLyrics.yrc.lyric : yrcLyrics.lrc ? yrcLyrics.lrc.lyric : "暂无歌词，尽情欣赏音乐";
+                    let lyrics = yrcLyrics.yrc ? yrcLyrics.yrc.lyric : yrcLyrics.lrc ? yrcLyrics.lrc.lyric : "暂无歌词，尽情欣赏音乐";
+
+                    // 合并翻译（yrc 逐字翻译优先，其次 lrc 翻译），[tlyric] 标记附加，LyricsPlayer 解析时按时间戳配对
+                    if (lyrics && lyrics !== "暂无歌词，尽情欣赏音乐") {
+                        const translation =
+                            (yrcLyrics.yrcTlyric && yrcLyrics.yrcTlyric.lyric) ||
+                            (yrcLyrics.tlyric && yrcLyrics.tlyric.lyric) ||
+                            "";
+                        if (translation && translation.trim()) {
+                            lyrics = lyrics + "\n[tlyric]\n" + translation;
+                        }
+                    }
 
                     // 缓存结果
                     if (lyrics && lyrics !== "暂无歌词，尽情欣赏音乐") {
@@ -1099,12 +1110,21 @@ class MusicSearcher {
         }
     }
 
-    // 按网易云歌曲 ID 获取歌词
+    // 按网易云歌曲 ID 获取歌词（含翻译，[tlyric] 标记附加）
     async getLyricsById(songId) {
         try {
             const yrcResponse = await lyric_new({ id: songId });
             const yrcLyrics = yrcResponse?.body;
-            const lyric = yrcLyrics?.yrc?.lyric || yrcLyrics?.lrc?.lyric || "";
+            let lyric = yrcLyrics?.yrc?.lyric || yrcLyrics?.lrc?.lyric || "";
+            if (lyric) {
+                const translation =
+                    (yrcLyrics.yrcTlyric && yrcLyrics.yrcTlyric.lyric) ||
+                    (yrcLyrics.tlyric && yrcLyrics.tlyric.lyric) ||
+                    "";
+                if (translation && translation.trim()) {
+                    lyric = lyric + "\n[tlyric]\n" + translation;
+                }
+            }
             return lyric || "暂无歌词，尽情欣赏音乐";
         } catch (e) {
             console.error("获取歌词失败", e);

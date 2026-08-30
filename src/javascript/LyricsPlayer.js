@@ -234,6 +234,14 @@ class LyricsPlayer {
             ];
         }
 
+        // 提取翻译区块（[tlyric] 标记，MusicSearcher 合并的网易云翻译歌词）
+        let translationString = "";
+        if (lyricsString.includes("[tlyric]")) {
+            const parts = lyricsString.split("[tlyric]");
+            lyricsString = parts[0];
+            translationString = parts.slice(1).join("[tlyric]");
+        }
+
         const lines = lyricsString.split("\n");
         const parsedData = [];
 
@@ -307,9 +315,54 @@ class LyricsPlayer {
 
             // 尝试检测循环歌曲，延迟执行以确保audio元数据已加载
             setTimeout(() => this.detectLoopSong(), 2000);
+
+            // 按时间戳配对翻译行（yrc 逐字翻译 / lrc 翻译），附加到对应歌词行
+            if (translationString && translationString.trim()) {
+                this.attachTranslations(parsedData, translationString);
+            }
         }
 
         return parsedData;
+    }
+
+    // 解析翻译歌词并按时间戳配对到原文行（yrc 逐字翻译 / lrc 传统翻译）
+    attachTranslations(parsedData, translationString) {
+        const transMap = new Map(); // 时间戳(ms) -> 翻译文本
+        translationString.split("\n").forEach((line) => {
+            if (!line.trim()) return;
+            // 传统格式 [mm:ss.xx]文本
+            const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
+            if (m) {
+                const t = (parseInt(m[1]) * 60 + parseInt(m[2])) * 1000 + parseInt(m[3]);
+                const text = m[4].trim();
+                if (text) transMap.set(t, text);
+                return;
+            }
+            // yrc 逐字格式 [start,duration](t,d,t)字...
+            const y = line.match(/\[(\d+),(\d+)\]/);
+            if (y) {
+                const t = parseInt(y[1]);
+                const text = line.replace(/\[\d+,\d+\]/, "").replace(/\(\d+,\d+,\d+\)/g, "").trim();
+                if (text) transMap.set(t, text);
+            }
+        });
+        if (transMap.size === 0) return;
+
+        // 对每个原文行找时间戳最近（1 秒内）的翻译
+        parsedData.filter((d) => d.type === "lyric").forEach((lineData) => {
+            let best = null;
+            let bestDiff = Infinity;
+            for (const [t, text] of transMap) {
+                const diff = Math.abs(t - lineData.lineStart);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    best = text;
+                }
+            }
+            if (best && bestDiff <= 1000) {
+                lineData.translation = best;
+            }
+        });
     }
 
     createLyricElement(lyricData) {
@@ -328,6 +381,13 @@ class LyricsPlayer {
                 charSpan.textContent = char.text;
                 lineDiv.appendChild(charSpan);
             });
+        }
+        // 翻译行（小字，跟随歌词行一起高亮）
+        if (lyricData.translation) {
+            const transDiv = document.createElement("div");
+            transDiv.className = "lyric-translation";
+            transDiv.textContent = lyricData.translation;
+            lineDiv.appendChild(transDiv);
         }
         return lineDiv;
     }
@@ -819,6 +879,11 @@ class LyricsPlayer {
                     opacitySlider.focus();
                 }
             });
+
+            // 桌面歌词颜色设置变化（设置面板）→ 刷新桌面歌词样式
+            this.ipcRenderer.on("desktop-lyrics-color-refresh", () => {
+                this.updateDesktopLyricsStyle();
+            });
         }
     }
 
@@ -873,6 +938,10 @@ class LyricsPlayer {
         // 获取字体
         const fontFamily = this.settingManager.getSetting("fontFamilyCustom") || this.settingManager.getSetting("fontFamilyFallback") || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
+        // 桌面歌词颜色（当前行 / 翻译行）
+        const desktopLyricsColor = this.settingManager.getSetting("desktopLyricsColor") || "#7eb8ff";
+        const desktopLyricsTranslationColor = this.settingManager.getSetting("desktopLyricsTranslationColor") || "#aab2c0";
+
         // 发送样式到桌面歌词窗口
         this.ipcRenderer.send("update-lyrics-style", {
             currentLineSize: parseInt(fontSize),
@@ -880,7 +949,9 @@ class LyricsPlayer {
             theme1: theme1,
             theme2: theme2,
             backgroundColor: backgroundColor,
-            fontFamily: fontFamily
+            fontFamily: fontFamily,
+            desktopLyricsColor: desktopLyricsColor,
+            desktopLyricsTranslationColor: desktopLyricsTranslationColor
         });
     }
 
@@ -890,6 +961,7 @@ class LyricsPlayer {
 
         // 获取当前激活的歌词行
         let currentLine = "等待播放...";
+        let currentTranslation = "";
         let nextLine = "";
 
         // 找到当前激活的行
@@ -901,6 +973,7 @@ class LyricsPlayer {
                 if (activeLineData) {
                     const lineText = activeLineData.chars.map((char) => char.text).join("");
                     currentLine = lineText || "等待播放...";
+                    currentTranslation = activeLineData.translation || "";
 
                     // 找下一行
                     if (this.activeLineIndex + 1 < lyricsData.length) {
@@ -916,6 +989,7 @@ class LyricsPlayer {
         // 发送歌词数据到桌面歌词窗口 - 无论窗口状态
         this.ipcRenderer.send("update-desktop-lyrics", {
             currentLine: currentLine,
+            currentTranslation: currentTranslation,
             nextLine: nextLine,
             songInfo: this.currentSongInfo,
             currentTime: this.audio.currentTime,

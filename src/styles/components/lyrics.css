@@ -78,13 +78,21 @@
   margin: 20px 0;
   padding: 0 24px; /* 不顶满容器左右边界，为高亮放大预留空间，避免边缘裁字 */
   min-height: 32px;
-  opacity: 0.7;
-  text-align: center;
+  opacity: 0.7;  text-align: center;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
   transition: opacity 0.25s ease, transform 0.25s ease;
   will-change: opacity;
+}
+
+/* 翻译行（小字，跟随歌词行一起高亮/缩放） */
+.lyric-translation {
+  font-size: calc(var(--lyric-line-font-size) * 0.58);
+  line-height: 1.5;
+  opacity: 0.6;
+  margin-top: 2px;
+  letter-spacing: 0.01em;
 }
 
 /* 当前播放的歌词行（滚动方案：行固定，仅高亮） */
@@ -93,6 +101,12 @@
   font-weight: 600;
   color: var(--theme-2);
   text-shadow: 0 0 8px rgba(var(--theme-2-rgb), 0.3);
+}
+
+.lyric-line.active .lyric-translation {
+  opacity: 0.85;
+  font-weight: 400;
+  text-shadow: none;
 }
 
 /* 可点击歌词样式 */
