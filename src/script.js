@@ -255,6 +255,52 @@ class App {
             }
         });
 
+        // 手动搜索歌词：对当前播放歌曲
+        document.getElementById("lyricSearchBtn")?.addEventListener("click", async () => {
+            const song = this.playlistManager.playlist[this.playlistManager.playingNow];
+            if (!song) {
+                this.uiManager.showNotification("没有正在播放的歌曲", "warning");
+                return;
+            }
+            const lyric = await this.musicSearcher.showLyricSearchDialog(song.title);
+            if (lyric && lyric !== "暂无歌词，尽情欣赏音乐") {
+                this.playlistManager.playlist[this.playlistManager.playingNow].lyric = lyric;
+                this.playlistManager.savePlaylists();
+                this.lyricsPlayer.changeLyrics(lyric);
+                this.uiManager.showNotification("歌词已更新", "success");
+            }
+        });
+
+        // 播放列表抽屉：定位当前歌曲
+        document.getElementById("drawerLocate")?.addEventListener("click", () => {
+            const playing = document.querySelector("#playing-list .song.playing");
+            if (playing) {
+                playing.scrollIntoView({ behavior: "smooth", block: "center" });
+            } else {
+                const list = document.getElementById("playing-list");
+                if (list) list.scrollTop = 0;
+            }
+        });
+
+        // 播放列表抽屉开关
+        document.getElementById("drawerToggle")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.getElementById("playlistDrawer")?.classList.toggle("open");
+        });
+
+        document.getElementById("drawerClose")?.addEventListener("click", () => {
+            document.getElementById("playlistDrawer")?.classList.remove("open");
+        });
+
+        // 点击抽屉外部关闭
+        document.addEventListener("click", (e) => {
+            const drawer = document.getElementById("playlistDrawer");
+            const toggle = document.getElementById("drawerToggle");
+            if (drawer && toggle && drawer.classList.contains("open") && !drawer.contains(e.target) && !toggle.contains(e.target)) {
+                drawer.classList.remove("open");
+            }
+        });
+
         // 设置更新相关事件监听
         this.setupUpdateEvents();
     }

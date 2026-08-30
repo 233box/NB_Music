@@ -1,3 +1,32 @@
+/* 手动搜索歌词按钮 */
+.lyric-search-btn {
+  position: absolute;
+  bottom: 12px; /* 右下角，避开右上角的桌面歌词开关 */
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border-1);
+  background: var(--bg50);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.6;
+  z-index: 5;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.lyric-search-btn:hover {
+  opacity: 1;
+  background: var(--hover-half);
+}
+
+.lyric-search-btn i {
+  font-size: 14px;
+}
+
 /* 歌词容器样式 */
 #lyrics-container {
   text-align: center;
@@ -47,6 +76,7 @@
   font-size: var(--lyric-line-font-size);
   line-height: 1.8;
   margin: 20px 0;
+  padding: 0 24px; /* 不顶满容器左右边界，为高亮放大预留空间，避免边缘裁字 */
   min-height: 32px;
   opacity: 0.7;
   text-align: center;
@@ -180,7 +210,8 @@
 .char.active {
   filter: brightness(var(--brightness));
   color: var(--text);
-  font-size: 1.15em;
+  /* 用 transform 缩放代替 font-size 放大：不参与布局，换行位置不会因放大而改变 */
+  transform: scale(1.15);
   opacity: 1;
   text-shadow: 0 0 8px var(--rgba-13);
   background: linear-gradient(90deg, var(--theme-1), var(--theme-2));

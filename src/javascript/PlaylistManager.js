@@ -26,21 +26,26 @@ class PlaylistManager {
         // 'repeat', 'shuffle', 'repeat-one'
         this.playMode = localStorage.getItem("nbmusic_play_mode") || "repeat";
 
-        // 初始化时更新UI显示
-        const playModeIcon = document.querySelector(".playmode i");
-        if (playModeIcon) {
+        // 预随机洗牌状态：shuffleOrder 为洗牌后的索引序列，shuffleCursor 为当前游标
+        this.shuffleOrder = null;
+        this.shuffleCursor = 0;
+        this._autoAdvancing = false;
+
+        // 初始化时更新UI显示（同步所有播放模式图标）
+        const playModeIcons = document.querySelectorAll(".playmode i");
+        playModeIcons.forEach((icon) => {
             switch (this.playMode) {
                 case "shuffle":
-                    playModeIcon.className = "bi bi-shuffle";
+                    icon.className = "bi bi-shuffle";
                     break;
                 case "repeat":
-                    playModeIcon.className = "bi bi-repeat";
+                    icon.className = "bi bi-repeat";
                     break;
                 case "repeat-one":
-                    playModeIcon.className = "bi bi-repeat-1";
+                    icon.className = "bi bi-repeat-1";
                     break;
             }
-        }
+        });
         this.loadPlaylists();
     }
 
@@ -49,21 +54,83 @@ class PlaylistManager {
         const currentIndex = modes.indexOf(this.playMode);
         this.playMode = modes[(currentIndex + 1) % modes.length];
 
-        // 更新UI
-        const playModeIcon = document.querySelector(".playmode i");
-        switch (this.playMode) {
-            case "shuffle":
-                playModeIcon.className = "bi bi-shuffle";
-                break;
-            case "repeat":
-                playModeIcon.className = "bi bi-repeat";
-                break;
-            case "repeat-one":
-                playModeIcon.className = "bi bi-repeat-1";
-                break;
-        }
+        // 更新UI（同步所有播放模式图标，避免只更新到隐藏的移动端图标）
+        const playModeIcons = document.querySelectorAll(".playmode i");
+        playModeIcons.forEach((icon) => {
+            switch (this.playMode) {
+                case "shuffle":
+                    icon.className = "bi bi-shuffle";
+                    break;
+                case "repeat":
+                    icon.className = "bi bi-repeat";
+                    break;
+                case "repeat-one":
+                    icon.className = "bi bi-repeat-1";
+                    break;
+            }
+        });
         // 保存设置
         localStorage.setItem("nbmusic_play_mode", this.playMode);
+
+        // 进入随机模式时预生成洗牌序列；退出随机模式时恢复原始顺序显示
+        if (this.uiManager) {
+            this.uiManager.renderPlaylist();
+        }
+        if (this.playMode === "shuffle") {
+            this.buildShuffleOrder();
+        }
+    }
+
+    // 预随机洗牌：Fisher-Yates 打乱整个播放列表，按序播完一轮再重新洗牌
+    buildShuffleOrder() {
+        const len = this.playlist.length;
+        this.shuffleOrder = Array.from({ length: len }, (_, i) => i);
+        if (len <= 1) {
+            this.shuffleCursor = 0;
+            return;
+        }
+        for (let i = len - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.shuffleOrder[i], this.shuffleOrder[j]] = [this.shuffleOrder[j], this.shuffleOrder[i]];
+        }
+        // 当前播放曲移到序列开头，保证下一首不会立刻重复
+        const cur = this.playingNow;
+        if (cur >= 0 && cur < len) {
+            const idx = this.shuffleOrder.indexOf(cur);
+            if (idx > 0) {
+                this.shuffleOrder.splice(idx, 1);
+                this.shuffleOrder.unshift(cur);
+            }
+        }
+        this.shuffleCursor = 0;
+        if (this.uiManager) {
+            this.uiManager.renderPlaylist();
+        }
+    }
+
+    // 预随机下一首：按洗牌序列前进，一轮播完重新洗牌
+    getShuffleNextIndex() {
+        if (!this.shuffleOrder || this.shuffleOrder.length !== this.playlist.length) {
+            this.buildShuffleOrder();
+        }
+        this.shuffleCursor++;
+        if (this.shuffleCursor >= this.shuffleOrder.length) {
+            this.buildShuffleOrder();
+            this.shuffleCursor = 1;
+        }
+        return this.shuffleOrder[this.shuffleCursor];
+    }
+
+    // 预随机上一首：按洗牌序列后退
+    getShufflePrevIndex() {
+        if (!this.shuffleOrder || this.shuffleOrder.length !== this.playlist.length) {
+            this.buildShuffleOrder();
+        }
+        this.shuffleCursor--;
+        if (this.shuffleCursor < 0) {
+            this.shuffleCursor = this.shuffleOrder.length - 1;
+        }
+        return this.shuffleOrder[this.shuffleCursor];
     }
     bulkDeleteSongs(songIds) {
         try {
@@ -252,6 +319,11 @@ class PlaylistManager {
 
             const song = this.playlist[index];
 
+            // shuffle 模式下手动选曲时重建预随机序列（自动切歌不重建）
+            if (this.playMode === "shuffle" && !this._autoAdvancing) {
+                this.buildShuffleOrder();
+            }
+
             // 如果正在加载同一首歌，直接返回
             if (this.currentPlayingBvid === song.bvid && this.isLoading) {
                 return;
@@ -378,7 +450,7 @@ class PlaylistManager {
         let lastError;
         const playButton = document.querySelector(".control>.buttons>.play");
         playButton.disabled = true;
-        const progressBar = document.querySelector(".player .control .progress .progress-bar .progress-bar-inner");
+        const progressBar = document.querySelector(".control .progress .progress-bar .progress-bar-inner");
         progressBar.classList.add("loading");
         const cacheEnabled = this.settingManager.getSetting("cacheEnabled");
 
@@ -495,7 +567,7 @@ class PlaylistManager {
     }
     async loadAndPlayAudio(song, replay, signal, autoPlay = true) {
         const playButton = document.querySelector(".control>.buttons>.play");
-        const progressBar = document.querySelector(".player .control .progress .progress-bar .progress-bar-inner");
+        const progressBar = document.querySelector(".control .progress .progress-bar .progress-bar-inner");
 
         try {
             playButton.disabled = true;
@@ -601,7 +673,7 @@ class PlaylistManager {
         this.audioPlayer.audio.volume = 1;
 
         // 重置进度条
-        const progressBar = document.querySelector(".player .control .progress .progress-bar .progress-bar-inner");
+        const progressBar = document.querySelector(".control .progress .progress-bar .progress-bar-inner");
         if (replay) {
             progressBar.style.transition = "none";
             progressBar.style.width = "0%";
@@ -634,8 +706,11 @@ class PlaylistManager {
         // 基础 UI 更新保持不变
         document.documentElement.style.setProperty("--bgul", "url(" + song.poster + ")");
         document.querySelector(".player-content .cover .cover-img").src = song.poster;
+        document.querySelector(".bar-cover-img").src = song.poster;
         document.querySelector(".player .info .title").textContent = song.title;
         document.querySelector(".player .info .artist").textContent = song.artist;
+        document.querySelector(".bar-info .title").textContent = song.title;
+        document.querySelector(".bar-info .artist").textContent = song.artist;
 
         if (this.settingManager.getSetting("background") === "video") {
             // 更严格地清理所有现有视频元素

@@ -10,10 +10,16 @@ class LyricsPlayer {
         this.lyricsContainer = document.getElementById("lyrics-container");
         // 先保存歌词偏移控件引用（构造清空容器前）
         const offsetControl = document.getElementById("lyricOffsetControl");
+        // 保存手动搜索歌词按钮引用（构造清空容器前）
+        const lyricSearchBtn = document.getElementById("lyricSearchBtn");
         this.lyricsContainer.innerHTML = "";
         // 构造清空后重新挂载偏移控件（CSS 绝对定位到角落）
         if (offsetControl) {
             this.lyricsContainer.appendChild(offsetControl);
+        }
+        // 重新挂载手动搜索歌词按钮
+        if (lyricSearchBtn) {
+            this.lyricsContainer.appendChild(lyricSearchBtn);
         }
         this.parsedData = this.parseLyrics(lyricsString);
         this.audio = audioElement;
@@ -1021,8 +1027,11 @@ class LyricsPlayer {
 
             // 检查是否在有效范围内
             if (this.audio && !isNaN(seconds) && isFinite(seconds) && seconds >= 0) {
+                // 跳转时扣除歌词偏移：显示时 音频时间+偏移=歌词时间，所以跳转时 音频时间=歌词时间-偏移
+                const lyricOffset = this.getCurrentLyricOffset();
+                const targetSeconds = Math.max(0, seconds - lyricOffset / 1000);
                 // 设置音频时间并播放
-                this.audio.currentTime = seconds;
+                this.audio.currentTime = targetSeconds;
 
                 // 如果音频是暂停状态，则开始播放
                 if (this.audio.paused) {

@@ -40,20 +40,21 @@
   </div>
   <div class="dialog-bg hide" id="lyricSearchDialog">
     <div class="dialog">
-      <h2>输入歌词搜索关键词</h2>
+      <h2>搜索歌词</h2>
       <div class="dialog-content">
         <div class="input-group">
-          <label>当前导入歌曲:</label>
+          <label>当前歌曲:</label>
           <div id="currentSongTitle"></div>
         </div>
         <div class="input-group">
           <label for="lyricKeyword">搜索关键词:</label>
           <input type="text" id="lyricKeyword" placeholder="输入关键词搜索歌词" />
         </div>
+        <div id="lyricSearchResults" class="lyric-search-results"></div>
       </div>
       <div class="dialog-footer">
         <button id="skipLyric" class="dialog-btn dialog-btn-secondary">跳过</button>
-        <button id="confirmLyric" class="dialog-btn dialog-btn-primary">确认</button>
+        <button id="confirmLyric" class="dialog-btn dialog-btn-primary">搜索</button>
       </div>
     </div>
   </div>
@@ -385,25 +386,9 @@
         <a class="setting" data-page=".setting"><i class="bi bi-gear"></i>&nbsp;设置</a>
         <span class="focs" style="top: -55px; left: 0px"></span>
       </list>
-      <div class="playing-list" style="display: flex; flex-direction: column; min-height: 0; max-height: 100%">
-        <div class="listname" style="padding: 2px 20px">
-          <div id="listname" style="margin-bottom: 3px;">默认歌单</div>
-          <div class="controls">
-            <div class="playmode">
-              <i class="bi bi-repeat"></i>
-            </div>
-            <div class="rename">
-              <i class="bi bi-pencil-square"></i>
-            </div>
-          </div>
-        </div>
-        <list class="list" id="playing-list" style="display: block !important">
-          <div class="song">
-            <img class="poster" alt="Poster image" />
-            <div class="name"></div>
-            <div class="artist"></div>
-          </div>
-        </list>
+      <div class="sidebar-footer">
+        <i class="bi bi-music-note-beamed"></i>
+        <span>NB Music</span>
       </div>
     </div>
     <!-- 添加侧栏拖拽条 -->
@@ -418,57 +403,11 @@
             <div class="title">歌曲名</div>
             <div class="artist">歌手</div>
           </div>
-          <div class="control">
-            <div class="advanced-controls">
-              <div class="custom-select speed-control-wrapper">
-                <div class="select-selected">1x</div>
-                <div class="select-items">
-                  <div class="select-item" data-value="0.5">0.5x</div>
-                  <div class="select-item selected" data-value="1">1x</div>
-                  <div class="select-item" data-value="1.25">1.25x</div>
-                  <div class="select-item" data-value="1.5">1.5x</div>
-                  <div class="select-item" data-value="2">2x</div>
-                </div>
-              </div>
-              <div class="play-container" style="position: relative;">
-                <button class="import-btn download"><i class="bi bi-download"></i></button>
-                <button class="play-video-btn import-btn" id="playVideoBtn"><i class="bi bi-film"></i></button>
-                <button class="import-btn" id="VolCtrlBtn"><i class="bi bi-volume-down-fill" style="transform: scale(1.5);"></i></button>
-                <button class="effect-btn import-btn"><i class="bi bi-sliders2-vertical"></i></button>
-            </div>
-              <!-- <button class="local-import-btn import-btn" id="localImportBtn"><i class="bi bi-file-earmark-music"></i></button> -->
-            </div>
-
-            <div class="progress">
-              <div class="progress-bar">
-                <div class="progress-bar-inner" style="width: 0px"></div>
-              </div>
-            </div>
-            <div class="buttons">
-              <div class="nr prev" data-action="prev">
-                <i class="bi bi-arrow-left"></i>
-              </div>
-              <div class="play paused" data-action="play">
-                <div class="pause">
-                  <div class="left"></div>
-                  <div class="right"></div>
-                </div>
-                <div class="play">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="90" height="100" fill="transparent"
-                    class="bi bi-play-fill" viewBox="0 0 16 16">
-                    <path transform="translate(3,3)"
-                      d="m7.596 5.697-4.363 2.692c-.34.213-.833-.066-.833-.497V2.308c0-.43.492-.71.833-.496l4.363 2.692a.502.502 0 0 1 0 1.193">
-                    </path>
-                  </svg>
-                </div>
-              </div>
-              <div class="nr next" data-action="next">
-                <i class="bi bi-arrow-right"></i>
-              </div>
-            </div>
-          </div>
         </div>
         <div id="lyrics-container">
+          <button class="lyric-search-btn" id="lyricSearchBtn" title="手动搜索歌词">
+            <i class="bi bi-search"></i>
+          </button>
           <div class="lyric-offset-control" id="lyricOffsetControl">
             <button class="lyric-offset-btn" id="lyricOffsetMinus" title="歌词偏移 -100ms">-100</button>
             <span class="lyric-offset-value" id="lyricOffsetValue">0ms</span>
@@ -1099,6 +1038,106 @@
     <div class="option" id="account-home">B站主页</div>
     <div class="option" id="account-logout">退出登录</div>
   </div>
+  </div>
+
+  <!-- 底部常驻播放条 -->
+  <div class="player-bar">
+    <div class="bar-cover">
+      <img class="bar-cover-img" src="../img/NB_Music.png" alt="cover" />
+    </div>
+    <div class="bar-info">
+      <div class="title">歌曲名</div>
+      <div class="artist">歌手</div>
+    </div>
+    <div class="control">
+      <div class="buttons">
+        <div class="nr prev" data-action="prev">
+          <i class="bi bi-arrow-left"></i>
+        </div>
+        <div class="play paused" data-action="play">
+          <div class="pause">
+            <div class="left"></div>
+            <div class="right"></div>
+          </div>
+          <div class="play">
+            <svg xmlns="http://www.w3.org/2000/svg" width="90" height="100" fill="transparent"
+              class="bi bi-play-fill" viewBox="0 0 16 16">
+              <path transform="translate(3,3)"
+                d="m7.596 5.697-4.363 2.692c-.34.213-.833-.066-.833-.497V2.308c0-.43.492-.71.833-.496l4.363 2.692a.502.502 0 0 1 0 1.193">
+              </path>
+            </svg>
+          </div>
+        </div>
+        <div class="nr next" data-action="next">
+          <i class="bi bi-arrow-right"></i>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="progress-bar">
+          <div class="progress-bar-inner" style="width: 0px"></div>
+        </div>
+      </div>
+      <div class="time">
+        <span class="currentTime">0:00</span>
+      </div>
+      <div class="advanced-controls">
+        <div class="custom-select speed-control-wrapper">
+          <div class="select-selected">1x</div>
+          <div class="select-items">
+            <div class="select-item" data-value="0.5">0.5x</div>
+            <div class="select-item selected" data-value="1">1x</div>
+            <div class="select-item" data-value="1.25">1.25x</div>
+            <div class="select-item" data-value="1.5">1.5x</div>
+            <div class="select-item" data-value="2">2x</div>
+          </div>
+        </div>
+        <div class="play-container" style="position: relative;">
+          <button class="import-btn download"><i class="bi bi-download"></i></button>
+          <button class="play-video-btn import-btn" id="playVideoBtn"><i class="bi bi-film"></i></button>
+          <button class="import-btn" id="VolCtrlBtn"><i class="bi bi-volume-down-fill" style="transform: scale(1.5);"></i></button>
+          <button class="effect-btn import-btn"><i class="bi bi-sliders2-vertical"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="bar-tools">
+      <button class="drawer-toggle" id="drawerToggle" title="播放列表">
+        <i class="bi bi-list-ul"></i>
+        <span class="drawer-count" id="drawerCount">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 播放列表抽屉 -->
+  <div class="playlist-drawer" id="playlistDrawer">
+    <div class="drawer-header">
+      <div class="listname">
+        <div id="listname">默认歌单</div>
+        <div class="controls">
+          <div class="playmode">
+            <i class="bi bi-repeat"></i>
+          </div>
+          <div class="rename">
+            <i class="bi bi-pencil-square"></i>
+          </div>
+        </div>
+      </div>
+      <button class="drawer-locate" id="drawerLocate" title="定位当前歌曲">
+        <i class="bi bi-crosshair"></i>
+      </button>
+      <button class="drawer-close" id="drawerClose" title="关闭">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <list class="list" id="playing-list" style="display: block !important">
+      <div class="song">
+        <img class="poster" alt="Poster image" />
+        <div class="name"></div>
+        <div class="artist"></div>
+      </div>
+    </list>
+  </div>
+
+
 </body>
 <script src="./script.js"></script>
 <script src="./mobile.js"></script>

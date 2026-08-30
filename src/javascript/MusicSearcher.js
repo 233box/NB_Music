@@ -1079,17 +1079,52 @@ class MusicSearcher {
         return videoStreams[0].baseUrl || videoStreams[0].base_url;
     }
 
+    // 搜索网易云歌词候选列表（供手动选择）
+    async searchLyricCandidates(keyword) {
+        try {
+            const searchResponse = await search({
+                keywords: keyword,
+                limit: 10
+            });
+            const songs = searchResponse?.body?.result?.songs || [];
+            return songs.map((song) => ({
+                id: song.id,
+                name: song.name,
+                artist: (song.artists || []).map((a) => a.name).join("/"),
+                album: song.album?.name || ""
+            }));
+        } catch (e) {
+            console.error("搜索歌词候选失败", e);
+            return [];
+        }
+    }
+
+    // 按网易云歌曲 ID 获取歌词
+    async getLyricsById(songId) {
+        try {
+            const yrcResponse = await lyric_new({ id: songId });
+            const yrcLyrics = yrcResponse?.body;
+            const lyric = yrcLyrics?.yrc?.lyric || yrcLyrics?.lrc?.lyric || "";
+            return lyric || "暂无歌词，尽情欣赏音乐";
+        } catch (e) {
+            console.error("获取歌词失败", e);
+            return "暂无歌词，尽情欣赏音乐";
+        }
+    }
+
     async showLyricSearchDialog(songTitle) {
         return new Promise((resolve) => {
             const dialog = document.getElementById("lyricSearchDialog");
             const titleDiv = document.getElementById("currentSongTitle");
             const keywordInput = document.getElementById("lyricKeyword");
+            const resultsEl = document.getElementById("lyricSearchResults");
             const skipBtn = document.getElementById("skipLyric");
             const confirmBtn = document.getElementById("confirmLyric");
 
             // 显示当前歌曲信息
             titleDiv.textContent = songTitle;
             keywordInput.value = songTitle;
+            if (resultsEl) resultsEl.innerHTML = "";
             dialog.classList.remove("hide");
 
             const handleSkip = () => {
@@ -1099,17 +1134,41 @@ class MusicSearcher {
 
             const handleConfirm = async () => {
                 const keyword = keywordInput.value.trim();
-                cleanup();
-                if (keyword) {
-                    try {
-                        const lyric = await this.getLyrics(keyword);
-                        resolve(lyric);
-                    } catch {
-                        resolve("暂无歌词，尽情欣赏音乐");
-                    }
-                } else {
-                    resolve("暂无歌词，尽情欣赏音乐");
+                if (!keyword) return;
+                confirmBtn.disabled = true;
+                if (resultsEl) {
+                    resultsEl.innerHTML = '<div class="lyric-search-loading">搜索中...</div>';
                 }
+                let candidates = [];
+                try {
+                    candidates = await this.searchLyricCandidates(keyword);
+                } catch (e) {
+                    console.error("搜索歌词失败", e);
+                }
+                confirmBtn.disabled = false;
+                if (candidates.length === 0) {
+                    if (resultsEl) resultsEl.innerHTML = '<div class="lyric-search-empty">没有找到相关歌曲，换个关键词试试</div>';
+                    return;
+                }
+                resultsEl.innerHTML = "";
+                candidates.forEach((c) => {
+                    const item = document.createElement("div");
+                    item.className = "lyric-search-result";
+                    const nameEl = document.createElement("div");
+                    nameEl.className = "lsr-name";
+                    nameEl.textContent = c.name;
+                    const artistEl = document.createElement("div");
+                    artistEl.className = "lsr-artist";
+                    artistEl.textContent = c.artist + (c.album ? " · " + c.album : "");
+                    item.appendChild(nameEl);
+                    item.appendChild(artistEl);
+                    item.addEventListener("click", async () => {
+                        cleanup();
+                        const lyric = await this.getLyricsById(c.id);
+                        resolve(lyric);
+                    });
+                    resultsEl.appendChild(item);
+                });
             };
 
             const handleKeydown = (e) => {
@@ -1125,6 +1184,7 @@ class MusicSearcher {
                 skipBtn.removeEventListener("click", handleSkip);
                 confirmBtn.removeEventListener("click", handleConfirm);
                 keywordInput.removeEventListener("keydown", handleKeydown);
+                if (resultsEl) resultsEl.innerHTML = "";
             };
 
             skipBtn.addEventListener("click", handleSkip);

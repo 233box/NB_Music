@@ -453,7 +453,7 @@
         if (playmode) {
             playmode.addEventListener("click", function () {
                 // 触发侧边栏中的相同按钮
-                const originalPlaymode = document.querySelector(".sidebar .playmode");
+                const originalPlaymode = document.querySelector(".playlist-drawer .playmode");
                 if (originalPlaymode) {
                     originalPlaymode.click();
 
@@ -466,7 +466,7 @@
         if (rename) {
             rename.addEventListener("click", function () {
                 // 触发侧边栏中的相同按钮
-                const originalRename = document.querySelector(".sidebar .rename");
+                const originalRename = document.querySelector(".playlist-drawer .rename");
                 if (originalRename) {
                     originalRename.click();
                 }

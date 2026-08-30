@@ -21,6 +21,7 @@
 @import './components/playerstates.css';  /* 播放器状态样式 */
 @import './components/login.css';  /* 登录界面样式 */
 @import './components/volumecontrol.css'; /* 音量控制样式 */
+@import './components/playerbar.css'; /* 底部常驻播放条与播放列表抽屉样式 */
 
 /* 导入动画 */
 @import './animations.css';    /* 动画样式 */

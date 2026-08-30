@@ -631,3 +631,44 @@ select:disabled {
   flex-direction: column;
   gap: 16px;
 }
+
+/* 歌词搜索结果列表 */
+.lyric-search-results {
+  margin-top: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lyric-search-result {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg50);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.lyric-search-result:hover {
+  background: var(--hover);
+}
+
+.lyric-search-result .lsr-name {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.lyric-search-result .lsr-artist {
+  font-size: 12px;
+  color: var(--rgba-6);
+  margin-top: 2px;
+}
+
+.lyric-search-loading,
+.lyric-search-empty {
+  text-align: center;
+  padding: 16px;
+  color: var(--rgba-6);
+  font-size: 13px;
+}

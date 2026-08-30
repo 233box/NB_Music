@@ -260,11 +260,12 @@ class AudioPlayer {
     
         let prevIndex;
         if (this.playlistManager.playMode === 'shuffle') {
-            // 随机播放
-            prevIndex = Math.floor(Math.random() * this.playlistManager.playlist.length);
-            while(prevIndex === this.playlistManager.playingNow && this.playlistManager.playlist.length > 1) {
-                prevIndex = Math.floor(Math.random() * this.playlistManager.playlist.length);
-            }
+            // 预随机：按洗牌序列后退
+            const prev = this.playlistManager.getShufflePrevIndex();
+            this.playlistManager._autoAdvancing = true;
+            this.playlistManager.setPlayingNow(prev);
+            this.playlistManager._autoAdvancing = false;
+            return;
         } else {
             // 列表循环和单曲循环模式下都使用相同的上一首逻辑
             prevIndex = this.playlistManager.playingNow > 0 ? 
@@ -294,12 +295,12 @@ class AudioPlayer {
         let nextIndex;
         switch (this.playlistManager.playMode) {
             case 'shuffle': {
-                // 随机播放
-                nextIndex = Math.floor(Math.random() * this.playlistManager.playlist.length);
-                while (nextIndex === this.playlistManager.playingNow && this.playlistManager.playlist.length > 1) {
-                    nextIndex = Math.floor(Math.random() * this.playlistManager.playlist.length);
-                }
-                break;
+                // 预随机：按洗牌序列前进
+                const next = this.playlistManager.getShuffleNextIndex();
+                this.playlistManager._autoAdvancing = true;
+                this.playlistManager.setPlayingNow(next);
+                this.playlistManager._autoAdvancing = false;
+                return;
             }
             case 'repeat': {
                 // 列表循环模式下使用下一首逻辑

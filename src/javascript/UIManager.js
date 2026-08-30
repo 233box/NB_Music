@@ -670,11 +670,11 @@ class UIManager {
         // 音频进度条
         this.audioPlayer.audio.addEventListener("timeupdate", () => {
             const progress = (this.audioPlayer.audio.currentTime / this.audioPlayer.audio.duration) * 100;
-            document.querySelector(".player .control .progress .progress-bar .progress-bar-inner").style.width = progress + "%";
+            document.querySelector(".control .progress .progress-bar .progress-bar-inner").style.width = progress + "%";
         });
 
         // 进度条点击
-        document.querySelector(".player .control .progress .progress-bar").addEventListener("click", (event) => {
+        document.querySelector(".control .progress .progress-bar").addEventListener("click", (event) => {
             const progressBar = event.currentTarget;
             const clickPosition = event.offsetX;
             const progressBarWidth = progressBar.offsetWidth;
@@ -875,6 +875,10 @@ class UIManager {
         if (!this.playlistManager) {
             return;
         }
+        const drawerCountEl = document.getElementById("drawerCount");
+        if (drawerCountEl) {
+            drawerCountEl.textContent = String(this.playlistManager.playlist.length);
+        }
         document.querySelector("#listname").textContent = this.playlistManager.playlistName;
         const playlistElement = document.querySelector("#playing-list");
         playlistElement.innerHTML = "";
@@ -882,7 +886,14 @@ class UIManager {
         // 歌词偏移显示跟随切歌更新
         this.updateLyricOffsetDisplay();
 
-        this.playlistManager.playlist.forEach((song) => {
+        // 渲染顺序：shuffle 模式按洗牌序列显示（下一首就是列表下一行），否则按歌单原始顺序
+        const order =
+            this.playlistManager.playMode === "shuffle" && this.playlistManager.shuffleOrder
+                ? this.playlistManager.shuffleOrder
+                : this.playlistManager.playlist.map((_, i) => i);
+
+        order.forEach((idx) => {
+            const song = this.playlistManager.playlist[idx];
             const div = this.createSongElement(song, song.bvid, {
                 isExtract: true
             });
@@ -1186,6 +1197,8 @@ class UIManager {
         document.querySelector("video")?.remove();
         document.querySelector(".player .info .title").textContent = "NB Music";
         document.querySelector(".player .info .artist").textContent = "欢迎使用";
+        document.querySelector(".bar-info .title").textContent = "NB Music";
+        document.querySelector(".bar-info .artist").textContent = "欢迎使用";
         document.querySelector(".control>.buttons>.play").classList = "play paused";
         document.querySelector(".progress-bar-inner").style.width = "0%";
         this.audioPlayer.audio.src = "";
@@ -1470,7 +1483,7 @@ class UIManager {
     // 为播放器添加增强交互动画
     enhancePlayerControls() {
         // 添加时间预览提示功能
-        const progressBar = document.querySelector(".player .control .progress .progress-bar");
+        const progressBar = document.querySelector(".control .progress .progress-bar");
 
         if (progressBar) {
             // 创建时间预览元素
@@ -1512,7 +1525,7 @@ class UIManager {
                 }
 
                 // 更新播放时间显示
-                const currentTimeEl = document.querySelector(".player .control .time .currentTime");
+                const currentTimeEl = document.querySelector(".control .time .currentTime");
                 if (currentTimeEl) {
                     currentTimeEl.textContent = this.formatTime(duration * percent);
                 }
@@ -1542,7 +1555,7 @@ class UIManager {
         }
 
         // 增强音量控制功能
-        const volumeControl = document.querySelector(".player .control .buttons .volume");
+        const volumeControl = document.querySelector(".control .buttons .volume");
 
         if (volumeControl) {
             // 创建音量滑块
