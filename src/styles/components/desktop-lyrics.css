@@ -13,27 +13,44 @@
 }
 
 /* 基础样式 */
+html, body {
+  background: transparent;
+}
 body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   font-family: var(--font-base);
   user-select: none;
-  -webkit-app-region: drag;
+  /* 默认 no-drag：拖动由 JS 自绘实现（主进程轮询同步），不用系统拖拽 */
+  -webkit-app-region: no-drag;
   transition: background-color 0.3s ease;
   color: white;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
+/* 未锁定时提示可拖动（JS 自绘拖动） */
+body:not(.locked) {
+  cursor: move;
+}
+
+/* 交互态且未锁定时：整个窗口可拖动（控制面板等已单独 no-drag） */
+body.interactive:not(.locked) {
+  -webkit-app-region: drag;
+  cursor: move;
+}
+
 #lyrics-container {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100vw;
-  height: 100vh;
+  height: 100px; /* 固定高度，不随窗口长高，歌词位置不变 */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  position: relative;
 }
 
 /* 歌词内容样式 */
@@ -319,14 +336,13 @@ body:hover .progress-bar-inner::after {
   opacity: 0.7;
 }
 
-/* 控制面板 */
+/* 控制面板：仅交互态显示（穿透态隐藏，由常驻控制胶囊代替） */
 .control-panel {
   position: absolute;
   top: 20px;
   right: 20px;
-  display: flex;
+  display: none;
   gap: 12px;
-  opacity: 0;
   transition: var(--transition-default);
   -webkit-app-region: no-drag;
   background: var(--bg-glass-dark);
@@ -341,9 +357,42 @@ body:hover .progress-bar-inner::after {
   z-index: 100;
 }
 
-body:hover .control-panel {
-  opacity: 1;
+body.interactive .control-panel {
+  display: flex;
   transform: translateY(0) scale(1);
+}
+
+/* 常驻控制胶囊：穿透态下唯一的可交互入口 */
+.ctrl-dot {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-glass-dark);
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(calc(var(--blur-amount) * 1.5));
+  -webkit-backdrop-filter: blur(calc(var(--blur-amount) * 1.5));
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1px var(--border-light);
+  z-index: 100;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.ctrl-dot:hover {
+  transform: scale(1.08);
+  background: var(--bg-glass-darker);
+}
+
+body.interactive .ctrl-dot {
+  display: none;
 }
 
 .control-btn {
@@ -424,52 +473,20 @@ body:hover .control-panel {
   font-size: 20px;
 }
 
-/* 拖动和大小调整 */
-.drag-handle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  cursor: move;
-}
-
-.resize-handle {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 24px;
-  height: 24px;
-  cursor: nwse-resize;
+/* 锁定状态：窗口位置固定，交互态下不可拖动 */
+body.locked {
   -webkit-app-region: no-drag;
-  z-index: 50;
-  transition: opacity 0.3s;
-  opacity: 0.3;
+  cursor: default;
 }
 
-.resize-handle::before,
-.resize-handle::after {
-  content: '';
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  background: rgba(255, 255, 255, 0.6);
+body.locked .lyrics-content {
+  cursor: default;
 }
 
-.resize-handle::before {
-  width: 12px;
-  height: 2px;
-  box-shadow: 0 -4px 0 rgba(255, 255, 255, 0.6), 0 -8px 0 rgba(255, 255, 255, 0.6);
-}
-
-.resize-handle::after {
-  width: 2px;
-  height: 12px;
-  box-shadow: -4px 0 0 rgba(255, 255, 255, 0.6), -8px 0 0 rgba(255, 255, 255, 0.6);
-}
-
-body:hover .resize-handle {
-  opacity: 0.7;
+/* 非交互态强制隐藏进度条与字体面板，避免穿透时误显/截断 */
+body:not(.interactive) .progress-info,
+body:not(.interactive) .font-size-panel {
+  display: none;
 }
 
 /* 字体调整面板 */

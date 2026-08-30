@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>桌面歌词控制</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background: transparent;
+    }
+    body {
+      overflow: hidden;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+      background: transparent;
+      -webkit-app-region: no-drag; /* 拖动由 JS 自绘实现（主进程轮询同步），避免系统拖拽事件不可靠 */
+      color: #fff;
+    }
+
+    #bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 100vh;
+      padding: 0 10px;
+      border-radius: 26px;
+      background: rgba(18, 18, 28, 0.94);
+    }
+
+    /* 收起态：只剩一个小圆点 */
+    body.collapsed #bar {
+      justify-content: center;
+      padding: 0;
+      border-radius: 50%;
+      width: 24px;
+    }
+
+    body.collapsed .btn:not(#toggleBtn),
+    body.collapsed .progress-wrap {
+      display: none;
+    }
+
+    .btn {
+      -webkit-app-region: no-drag;
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
+      color: rgba(255, 255, 255, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+    .btn:hover { background: rgba(255, 255, 255, 0.16); }
+    .btn.active { background: #2575fc; color: #fff; }
+
+    .progress-wrap {
+      -webkit-app-region: no-drag;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      min-width: 90px;
+      padding: 0 2px;
+    }
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 2px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .progress-inner {
+      height: 100%;
+      width: 0%;
+      background: #2575fc;
+      border-radius: 2px;
+      transition: width 0.1s linear;
+    }
+    .time {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 0.02em;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <button class="btn" id="toggleBtn" title="展开控制面板">
+      <i class="bi bi-three-dots"></i>
+    </button>
+    <button class="btn" id="pinBtn" title="锁定窗口位置">
+      <i class="bi bi-pin-fill"></i>
+    </button>
+    <button class="btn" id="playBtn" title="播放/暂停">
+      <i class="bi bi-play-fill"></i>
+    </button>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-inner" id="progressInner"></div>
+      </div>
+      <div class="time">
+        <span id="curTime">00:00</span> / <span id="totTime">00:00</span>
+      </div>
+    </div>
+    <button class="btn" id="fontDown" title="缩小歌词">
+      <i class="bi bi-dash"></i>
+    </button>
+    <button class="btn" id="fontUp" title="放大歌词">
+      <i class="bi bi-plus"></i>
+    </button>
+    <button class="btn" id="closeBtn" title="关闭桌面歌词">
+      <i class="bi bi-x"></i>
+    </button>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const pinBtn = document.getElementById('pinBtn');
+    const playBtn = document.getElementById('playBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressInner = document.getElementById('progressInner');
+    const curTime = document.getElementById('curTime');
+    const totTime = document.getElementById('totTime');
+    const toggleBtn = document.getElementById('toggleBtn');
+
+    // 展开/收起状态（持久化），默认收起为小圆点
+    let expanded = false;
+    try {
+      expanded = localStorage.getItem("nbmusic_desktop_lyrics_control_expanded") === "true";
+    } catch (e) {}
+
+    function applyExpanded() {
+      document.body.classList.toggle('collapsed', !expanded);
+      toggleBtn.innerHTML = expanded ? '<i class="bi bi-chevron-right"></i>' : '<i class="bi bi-three-dots"></i>';
+      toggleBtn.title = expanded ? '收起面板' : '展开控制面板';
+      ipcRenderer.send('desktop-lyrics-control-size', expanded);
+    }
+    applyExpanded();
+
+    // 展开/收起：区分点击与拖动手势（收起态圆点几乎全是按钮，拖动应不触发展开）
+    let togglePress = null;
+    toggleBtn.addEventListener('mousedown', (e) => {
+      togglePress = { x: e.screenX, y: e.screenY };
+    });
+    toggleBtn.addEventListener('click', (e) => {
+      if (togglePress && Math.abs(e.screenX - togglePress.x) + Math.abs(e.screenY - togglePress.y) > 6) {
+        return; // 拖动手势，不展开
+      }
+      expanded = !expanded;
+      try { localStorage.setItem("nbmusic_desktop_lyrics_control_expanded", String(expanded)); } catch (err) {}
+      applyExpanded();
+    });
+
+    // 控制窗口自身不拖动（拖动主体是歌词窗口，锁定后歌词窗口穿透），按钮/进度条正常点击
+
+    // 锁定状态（持久化），默认锁定防误拖
+    let isPinned = true;
+    try {
+      isPinned = localStorage.getItem("nbmusic_desktop_lyrics_pinned") !== "false";
+    } catch (e) {}
+    applyPin();
+
+    // 上报持久化锁定状态给主进程（决定歌词窗口是否穿透）
+    ipcRenderer.send('desktop-lyrics-pin-init', isPinned);
+
+    // 插值时钟：进度按真实流逝时间推算，不模拟递增
+    let syncTime = 0, syncCurrent = 0, syncDuration = 0, syncPlaying = false;
+
+    function formatTime(seconds) {
+      const s = Math.max(0, Math.floor(seconds));
+      return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    function displayTime() {
+      if (!syncPlaying) return syncCurrent;
+      return syncDuration > 0 ? Math.min(syncDuration, syncCurrent + (performance.now() - syncTime) / 1000) : syncCurrent + (performance.now() - syncTime) / 1000;
+    }
+
+    function renderProgress() {
+      if (syncDuration > 0) {
+        const t = displayTime();
+        curTime.textContent = formatTime(t);
+        progressInner.style.width = `${Math.min(100, (t / syncDuration) * 100)}%`;
+      }
+    }
+    setInterval(renderProgress, 200);
+
+    function applyPin() {
+      document.body.classList.toggle('locked', isPinned);
+      pinBtn.classList.toggle('active', isPinned);
+      pinBtn.title = isPinned ? '解除锁定' : '锁定窗口位置';
+      pinBtn.innerHTML = isPinned ? '<i class="bi bi-pin-fill"></i>' : '<i class="bi bi-pin"></i>';
+    }
+
+    pinBtn.addEventListener('click', () => {
+      isPinned = !isPinned;
+      try { localStorage.setItem("nbmusic_desktop_lyrics_pinned", String(isPinned)); } catch (e) {}
+      applyPin();
+      ipcRenderer.send('desktop-lyrics-toggle-pin');
+    });
+
+    playBtn.addEventListener('click', () => {
+      ipcRenderer.send('desktop-lyrics-toggle-play');
+    });
+
+    closeBtn.addEventListener('click', () => {
+      ipcRenderer.send('desktop-lyrics-close');
+    });
+
+    // 进度条点击 seek
+    progressBar.addEventListener('click', (e) => {
+      const rect = progressBar.getBoundingClientRect();
+      const percent = (e.clientX - rect.left) / rect.width;
+      if (syncDuration > 0) {
+        syncCurrent = Math.min(syncDuration, percent * syncDuration);
+        syncTime = performance.now();
+        renderProgress();
+        ipcRenderer.send('desktop-lyrics-seek', syncCurrent);
+      }
+    });
+
+    // 字号调节：±2px，走主窗口设置链路（会持久化并同步回歌词窗口）
+    let currentLineSize = 28;
+    let nextLineSize = 24;
+    fontDown.addEventListener('click', () => {
+      currentLineSize = Math.max(18, currentLineSize - 2);
+      nextLineSize = Math.max(14, nextLineSize - 2);
+      ipcRenderer.send('desktop-lyrics-update-style', { currentLineSize, nextLineSize });
+    });
+    fontUp.addEventListener('click', () => {
+      currentLineSize = Math.min(48, currentLineSize + 2);
+      nextLineSize = Math.min(36, nextLineSize + 2);
+      ipcRenderer.send('desktop-lyrics-update-style', { currentLineSize, nextLineSize });
+    });
+
+    // 接收歌词/进度更新（与歌词窗口同一数据源）
+    ipcRenderer.on('update-desktop-lyrics', (event, data) => {
+      const { currentTime, duration, isPlaying } = data;
+      if (currentTime !== undefined && duration) {
+        syncCurrent = currentTime;
+        syncDuration = duration;
+        syncTime = performance.now();
+        syncPlaying = !!isPlaying;
+        totTime.textContent = formatTime(duration);
+        renderProgress();
+      }
+      playBtn.innerHTML = isPlaying ? '<i class="bi bi-pause-fill"></i>' : '<i class="bi bi-play-fill"></i>';
+    });
+  </script>
+</body>
+</html>

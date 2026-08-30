@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, ipcMain, Menu, Tray, shell, nativeImage } = require("electron");
+const { app, BrowserWindow, session, ipcMain, Menu, Tray, shell, nativeImage, screen } = require("electron");
 const path = require("path");
 const puppeteer = require("puppeteer");
 const Storage = require("electron-store");
@@ -327,13 +327,35 @@ function showWindow(win) {
 }
 
 let desktopLyricsWindow = null;
+let desktopLyricsControlWindow = null;
+
+// 控制窗口（小条）相对歌词窗口的偏移：控制条位于歌词窗口右上角
+const LYRICS_CONTROL_OFF_X = (800 - 300) / 2; // 展开态水平居中：歌词窗口宽 800，控制条宽 300
+const LYRICS_CONTROL_OFF_Y = -52; // 展开态紧贴歌词窗口上方（不重叠，歌词窗口高 100，控制条高 52）
+
+// 拖动状态（JS 自绘拖动：主进程轮询鼠标位置，歌词窗口为主、控制条跟随，同帧同步）
+let lyricsDragState = null;
+let lyricsDragTimer = null;
+
+// 桌面歌词锁定状态：锁定后歌词窗口穿透不可拖、位置固定；未锁定则歌词窗口可拖、控制条跟随
+let desktopLyricsPinned = true;
+
+function applyDesktopLyricsPinned() {
+    if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
+        desktopLyricsWindow.setIgnoreMouseEvents(desktopLyricsPinned);
+    }
+}
 
 function createDesktopLyricsWindow() {
-    if (desktopLyricsWindow) {
-        desktopLyricsWindow.show();
-        return desktopLyricsWindow;
+    if (desktopLyricsControlWindow) {
+        desktopLyricsControlWindow.show();
+        if (desktopLyricsWindow) {
+            desktopLyricsWindow.show();
+        }
+        return desktopLyricsControlWindow;
     }
 
+    // 歌词窗口（独立，纯展示；未锁定可拖，锁定时穿透）
     desktopLyricsWindow = new BrowserWindow({
         width: 800,
         height: 100,
@@ -341,9 +363,12 @@ function createDesktopLyricsWindow() {
         y: 100,
         frame: false,
         transparent: true,
+        backgroundColor: "#00000000",
+        thickFrame: false,
+        shadow: false,
         alwaysOnTop: true,
         skipTaskbar: true,
-        resizable: true,
+        resizable: false,
         show: false,
         webPreferences: {
             nodeIntegration: true,
@@ -355,18 +380,65 @@ function createDesktopLyricsWindow() {
 
     desktopLyricsWindow.loadFile("src/desktop-lyrics.html");
 
+    // 按当前锁定状态应用穿透（锁定=穿透纯展示；未锁定=可交互可拖）
+    applyDesktopLyricsPinned();
+
     desktopLyricsWindow.once("ready-to-show", () => {
         desktopLyricsWindow.show();
     });
 
+    // 控制窗口（独立小条）：后创建以保证在歌词窗口之上（按钮不被歌词窗口遮挡）
+    desktopLyricsControlWindow = new BrowserWindow({
+        width: 300,
+        height: 52,
+        x: 200 + LYRICS_CONTROL_OFF_X,
+        y: 100 + LYRICS_CONTROL_OFF_Y,
+        frame: false,
+        transparent: true,
+        backgroundColor: "#00000000",
+        thickFrame: false,
+        shadow: false,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        show: false,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true,
+            backgroundThrottling: false
+        }
+    });
+
+    desktopLyricsControlWindow.loadFile("src/desktop-lyrics-control.html");
+
+    // 运行时强制窗口表面透明（选项 backgroundColor 在 setBounds 后可能失效，双保险）
+    desktopLyricsControlWindow.setBackgroundColor("#00000000");
+
+    desktopLyricsControlWindow.once("ready-to-show", () => {
+        desktopLyricsControlWindow.show();
+    });
+
     desktopLyricsWindow.on("closed", () => {
         desktopLyricsWindow = null;
+        if (desktopLyricsControlWindow) {
+            desktopLyricsControlWindow.close();
+            desktopLyricsControlWindow = null;
+        }
         if (global.mainWindow) {
             global.mainWindow.webContents.send("desktop-lyrics-closed");
         }
     });
 
-    return desktopLyricsWindow;
+    desktopLyricsControlWindow.on("closed", () => {
+        desktopLyricsControlWindow = null;
+        if (desktopLyricsWindow) {
+            desktopLyricsWindow.close();
+            desktopLyricsWindow = null;
+        }
+    });
+
+    return desktopLyricsControlWindow;
 }
 
 function createWindow() {
@@ -757,15 +829,24 @@ function setupIPC() {
     ipcMain.on("toggle-desktop-lyrics", (event, enabled) => {
         if (enabled) {
             createDesktopLyricsWindow();
-        } else if (desktopLyricsWindow) {
-            desktopLyricsWindow.close();
-            desktopLyricsWindow = null;
+        } else {
+            if (desktopLyricsControlWindow) {
+                desktopLyricsControlWindow.close();
+                desktopLyricsControlWindow = null;
+            }
+            if (desktopLyricsWindow) {
+                desktopLyricsWindow.close();
+                desktopLyricsWindow = null;
+            }
         }
     });
 
     ipcMain.on("update-desktop-lyrics", (event, lyricsData) => {
         if (desktopLyricsWindow) {
             desktopLyricsWindow.webContents.send("update-desktop-lyrics", lyricsData);
+        }
+        if (desktopLyricsControlWindow) {
+            desktopLyricsControlWindow.webContents.send("update-desktop-lyrics", lyricsData);
         }
     });
 
@@ -811,13 +892,94 @@ function setupIPC() {
         }
     });
 
-    ipcMain.on("desktop-lyrics-toggle-pin", () => {
-        if (desktopLyricsWindow) {
-            const isAlwaysOnTop = desktopLyricsWindow.isAlwaysOnTop();
-            desktopLyricsWindow.setAlwaysOnTop(!isAlwaysOnTop);
-            if (global.mainWindow) {
-                global.mainWindow.webContents.send("desktop-lyrics-pin-changed", !isAlwaysOnTop);
+    // 控制窗口展开/收起：收起为 24px 小圆点，展开为完整控制条；水平居中于歌词窗口、紧贴歌词窗口上方（不重叠）
+    ipcMain.on("desktop-lyrics-control-size", (event, expanded) => {
+        if (!desktopLyricsControlWindow) return;
+        const targetW = expanded ? 300 : 24;
+        const targetH = expanded ? 52 : 24;
+        // 以歌词窗口为基准：水平居中（(800-targetW)/2），紧贴歌词窗口上边缘
+        const lx = (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) ? desktopLyricsWindow.getBounds().x : desktopLyricsControlWindow.getBounds().x;
+        const ly = (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) ? desktopLyricsWindow.getBounds().y : desktopLyricsControlWindow.getBounds().y;
+        const newX = lx + (800 - targetW) / 2;
+        const newY = ly - targetH;
+        desktopLyricsControlWindow.setBounds({ x: newX, y: newY, width: targetW, height: targetH });
+        // setBounds 后窗口表面透明可能被重置，运行时再次强制
+        desktopLyricsControlWindow.setBackgroundColor("#00000000");
+    });
+
+    // 拖动（JS 自绘）：歌词窗口为主窗口，控制条保持偏移跟随，同帧同步不会相对滑动
+    ipcMain.on("desktop-lyrics-drag-start", () => {
+        if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed() || lyricsDragTimer) return;
+        const w = desktopLyricsWindow.getBounds();
+        const p = screen.getCursorScreenPoint();
+        lyricsDragState = { wx: w.x, wy: w.y, sx: p.x, sy: p.y, lastW: 0, lastH: 0, lastLW: 0, lastLH: 0, cw: 0, ch: 0, lw: 0, lh: 0 };
+        lyricsDragState.lw = w.width;
+        lyricsDragState.lh = w.height;
+        if (desktopLyricsControlWindow && !desktopLyricsControlWindow.isDestroyed()) {
+            const cb0 = desktopLyricsControlWindow.getBounds();
+            lyricsDragState.cw = cb0.width;
+            lyricsDragState.ch = cb0.height;
+            // 相对偏移：拖动时保持控制条相对歌词窗口的偏移不变（无论收起/展开）
+            lyricsDragState.offX = cb0.x - w.x;
+            lyricsDragState.offY = cb0.y - w.y;
+        }
+        lyricsDragTimer = setInterval(() => {
+            if (!lyricsDragState) return;
+            const cur = screen.getCursorScreenPoint();
+            const nx = lyricsDragState.wx + (cur.x - lyricsDragState.sx);
+            const ny = lyricsDragState.wy + (cur.y - lyricsDragState.sy);
+            if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
+                // 必须用 setBounds 显式固定尺寸：setPosition 内部 getBounds+SetWindowPos 会累积 DPI 尺寸漂移
+                desktopLyricsWindow.setBounds({ x: nx, y: ny, width: lyricsDragState.lw, height: lyricsDragState.lh });
+                const lb = desktopLyricsWindow.getBounds();
+                if (lb.width !== lyricsDragState.lastLW || lb.height !== lyricsDragState.lastLH) {
+                    lyricsDragState.lastLW = lb.width;
+                    lyricsDragState.lastLH = lb.height;
+                    fs.appendFileSync("desktop-lyrics-drag.log", `[${Date.now()}] LYRICS size changed during drag: ${lb.width}x${lb.height}\n`);
+                }
             }
+            if (desktopLyricsControlWindow && !desktopLyricsControlWindow.isDestroyed()) {
+                const cb = desktopLyricsControlWindow.getBounds();
+                if (cb.width !== lyricsDragState.lastW || cb.height !== lyricsDragState.lastH) {
+                    lyricsDragState.lastW = cb.width;
+                    lyricsDragState.lastH = cb.height;
+                    fs.appendFileSync("desktop-lyrics-drag.log", `[${Date.now()}] control size changed during drag: ${cb.width}x${cb.height} @ ${cb.x},${cb.y}\n`);
+                }
+                // 相对偏移跟随：与展开/收起状态无关，保持用户看到的相对位置
+                const tx = nx + lyricsDragState.offX;
+                const ty = ny + lyricsDragState.offY;
+                if (cb.x !== tx || cb.y !== ty) {
+                    desktopLyricsControlWindow.setBounds({ x: tx, y: ty, width: lyricsDragState.cw, height: lyricsDragState.ch });
+                }
+                // 保持控制条在歌词窗口之上（拖动时歌词窗口高频 SetWindowPos 会被提到前面，遮住按钮）
+                desktopLyricsControlWindow.moveTop();
+            }
+        }, 16);
+    });
+
+    ipcMain.on("desktop-lyrics-drag-end", () => {
+        if (lyricsDragTimer) {
+            clearInterval(lyricsDragTimer);
+            lyricsDragTimer = null;
+        }
+        lyricsDragState = null;
+    });
+
+    ipcMain.on("desktop-lyrics-toggle-pin", () => {
+        // 锁定切换：锁定后歌词窗口穿透不可拖；未锁定则歌词窗口可拖、控制条跟随
+        desktopLyricsPinned = !desktopLyricsPinned;
+        applyDesktopLyricsPinned();
+        if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
+            desktopLyricsWindow.webContents.send("desktop-lyrics-pin-state", desktopLyricsPinned);
+        }
+    });
+
+    // 控制窗口初始化时上报持久化锁定状态
+    ipcMain.on("desktop-lyrics-pin-init", (event, pinned) => {
+        desktopLyricsPinned = !!pinned;
+        applyDesktopLyricsPinned();
+        if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
+            desktopLyricsWindow.webContents.send("desktop-lyrics-pin-state", desktopLyricsPinned);
         }
     });
 
@@ -835,6 +997,10 @@ function setupIPC() {
     });
 
     ipcMain.on("desktop-lyrics-close", () => {
+        if (desktopLyricsControlWindow) {
+            desktopLyricsControlWindow.close();
+            desktopLyricsControlWindow = null;
+        }
         if (desktopLyricsWindow) {
             desktopLyricsWindow.close();
             desktopLyricsWindow = null;
