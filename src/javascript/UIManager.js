@@ -20,6 +20,12 @@ class UIManager {
         this.settingManager = settingManager;
         this.minimizeBtn = document.getElementById("maximize");
 
+        // 时间格式化（分:秒，如 3:45）
+        this.formatTime = (seconds) => {
+            const s = Math.max(0, Math.floor(seconds || 0));
+            return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+        };
+
         // 确保设置管理器先初始化
         if (this.audioPlayer) {
             this.audioPlayer.setSettingManager(settingManager);
@@ -667,11 +673,55 @@ class UIManager {
             }
         });
 
-        // 音频进度条
-        this.audioPlayer.audio.addEventListener("timeupdate", () => {
-            const progress = (this.audioPlayer.audio.currentTime / this.audioPlayer.audio.duration) * 100;
-            document.querySelector(".control .progress .progress-bar .progress-bar-inner").style.width = progress + "%";
+        // 纯享模式：点击播放条封面进入/退出（参考 ECHO MV 模式），只留底部播放条
+        const pureModeCover = document.querySelector(".bar-cover-img");
+        if (pureModeCover) {
+            pureModeCover.style.cursor = "pointer";
+            pureModeCover.title = "纯享模式（再次点击或按 ESC 退出）";
+            pureModeCover.addEventListener("click", (e) => {
+                e.stopPropagation();
+                document.body.classList.toggle("pure-mode");
+            });
+        }
+        // 纯享模式下点击播放条以外区域退出
+        document.addEventListener("click", (e) => {
+            if (document.body.classList.contains("pure-mode") && !e.target.closest(".player-bar")) {
+                document.body.classList.remove("pure-mode");
+            }
         });
+        // ESC 退出纯享模式
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                document.body.classList.remove("pure-mode");
+            }
+        });
+
+        // 音频进度条
+        const updateProgressDisplay = () => {
+            const audio = this.audioPlayer.audio;
+            // B站音频流 duration 可能不可用（NaN/Infinity），用歌曲数据兜底（导入时的视频时长秒数）
+            let dur = audio.duration;
+            if (!dur || !isFinite(dur) || dur <= 0) {
+                const pl = this.playlistManager;
+                if (pl && pl.playlist && pl.playlist[pl.playingNow]) {
+                    const sd = pl.playlist[pl.playingNow].duration;
+                    if (sd && sd > 0) dur = sd;
+                }
+            }
+            if (!dur || !isFinite(dur) || dur <= 0) dur = 0;
+            const progress = (audio.currentTime / dur) * 100;
+            const barInner = document.querySelector(".control .progress .progress-bar .progress-bar-inner");
+            if (barInner) barInner.style.width = (isNaN(progress) ? 0 : progress) + "%";
+            const curEl = document.querySelector(".control .time .currentTime");
+            if (curEl) curEl.textContent = this.formatTime(audio.currentTime || 0);
+            const totEl = document.querySelector(".control .time .totalTime");
+            if (totEl) totEl.textContent = dur > 0 ? this.formatTime(dur) : "0:00";
+        };
+        this.audioPlayer.audio.addEventListener("timeupdate", updateProgressDisplay);
+        this.audioPlayer.audio.addEventListener("loadedmetadata", updateProgressDisplay);
+        this.audioPlayer.audio.addEventListener("play", updateProgressDisplay);
+        // 初始化立即刷新一次（未播放时也能显示兜底总时长）
+        updateProgressDisplay();
 
         // 进度条点击
         document.querySelector(".control .progress .progress-bar").addEventListener("click", (event) => {

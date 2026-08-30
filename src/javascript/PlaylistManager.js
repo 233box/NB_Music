@@ -713,6 +713,8 @@ class PlaylistManager {
         document.querySelector(".bar-info .artist").textContent = song.artist;
 
         if (this.settingManager.getSetting("background") === "video") {
+            // 视频背景：不显示封面残留
+            document.documentElement.style.removeProperty("--bgul");
             // 更严格地清理所有现有视频元素
             this.cleanupVideoBackgrounds();
 
@@ -766,8 +768,8 @@ class PlaylistManager {
                             video.style.opacity = "1";
                             video.style.transition = "opacity 0.5s ease-in-out";
 
-                            // 如果音频正在播放，则视频也播放
-                            if (!this.audioPlayer.audio.paused) {
+                            // 音画同步：音频在播才播视频（暂停则显示静止帧）
+                            if (this.audioPlayer && this.audioPlayer.audio && !this.audioPlayer.audio.paused) {
                                 video.play().catch((err) => console.warn("视频自动播放失败:", err));
                             }
                         },
@@ -786,7 +788,7 @@ class PlaylistManager {
     }
 
     bindVideoEvents(video) {
-        // 音频播放/暂停时同步控制视频
+        // 音画同步：音频播放/暂停时同步控制视频
         const handlePlay = () => {
             video.play().catch((err) => console.warn("视频播放失败:", err));
         };
@@ -847,7 +849,7 @@ class PlaylistManager {
             // 设置初始进度
             video.currentTime = this.audioPlayer.audio.currentTime;
 
-            // 如果音频正在播放，视频也应该播放
+            // 音频在播则视频也播
             if (!this.audioPlayer.audio.paused) {
                 video.play().catch((err) => console.warn("视频初始播放失败:", err));
             }

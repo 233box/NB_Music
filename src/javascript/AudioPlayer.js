@@ -6,6 +6,11 @@ class AudioPlayer {
     constructor(playlistManager) {
         this.playlistManager = playlistManager;
         this.audio = new Audio();
+        // 挂载到 DOM：供 document.querySelector("audio") 使用（视频背景音画同步等依赖）
+        try {
+            this.audio.style.display = "none";
+            document.body.appendChild(this.audio);
+        } catch (e) {}
         this.audio.autoplay = false;
         this.audio.loop = false;
         this.audio.volume = 0; // 将由setSettingManager覆盖

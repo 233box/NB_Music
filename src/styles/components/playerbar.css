@@ -399,3 +399,18 @@
 .content>.player .player-content .cover {
   width: 78%;
 }
+
+/* 纯享模式：只保留底部播放条，其余 UI 隐藏，背景全屏可见 */
+body.pure-mode .sidebar,
+body.pure-mode .sidebar-resizer,
+body.pure-mode .content,
+body.pure-mode .mobile-playlist-backdrop,
+body.pure-mode .mobile-playlist,
+body.pure-mode .mobile-tabbar,
+body.pure-mode .titlebar {
+  display: none !important;
+}
+
+body.pure-mode .bar-cover-img {
+  cursor: pointer;
+}

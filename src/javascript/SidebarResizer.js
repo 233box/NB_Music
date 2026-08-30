@@ -10,7 +10,7 @@ class SidebarResizer {
         this.sidebar = document.querySelector(".sidebar");
         this.mica = document.querySelector(".mica");
         this.isResizing = false;
-        this.minWidth = 220;
+        this.minWidth = 150;
         this.maxWidth = 400;
         this.defaultWidth = 260;
 

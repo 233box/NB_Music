@@ -477,6 +477,8 @@ class SettingManager {
                 break;
             }
             case "video": {
+                // 视频背景：不显示封面残留
+                document.querySelector("html").style.removeProperty("--bgul");
                 // 设置视频背景
                 const currentSong = getSongInfo();
                 const currentTime = getCurrentAudioTime();
@@ -487,7 +489,7 @@ class SettingManager {
 
                     // 创建新视频元素
                     const video = document.createElement("video");
-                    video.autoplay = false; // 不自动播放，等待时间同步后再播放
+                    video.autoplay = false; // 不自动播放，等待加载后再播放
                     video.loop = true;
                     video.muted = true;
                     video.playsInline = true;
@@ -499,19 +501,19 @@ class SettingManager {
                     video.style.objectFit = "cover";
                     video.src = currentSong.video;
 
-                    // 视频加载完成后设置时间和播放状态
+                    // 视频加载完成后设置时间：音频在播则播，暂停则显示静止帧（清掉封面后立即可见）
                     video.addEventListener("loadedmetadata", () => {
                         // 同步当前音频进度
                         video.currentTime = currentTime;
 
-                        // 根据音频播放状态决定是否播放视频
+                        // 音画同步：音频在播才播视频
                         const audioPlayer = document.querySelector("audio");
                         if (audioPlayer && !audioPlayer.paused) {
                             video.play().catch((err) => console.warn("视频自动播放失败:", err));
                         }
                     });
 
-                    // 添加同步事件
+                    // 添加同步事件（播放/暂停/进度全联动）
                     const audioPlayer = document.querySelector("audio");
                     if (audioPlayer) {
                         const syncVideo = () => {

@@ -64,6 +64,8 @@ class LyricsPlayer {
                 this.ipcRenderer.on("desktop-lyrics-ready", () => {
                     this.desktopLyricsEnabled = true;
                     this.updateDesktopLyricsButton();
+                    // 窗口就绪时同步完整样式（颜色/字号/背景），避免重启后停留在 CSS 默认值
+                    this.updateDesktopLyricsStyle();
                     this.syncDesktopLyrics();
                 });
 
