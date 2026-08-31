@@ -51,6 +51,7 @@ class SettingManager {
         this.settings = { ...SettingManager.DEFAULT_VALUES };
         this.listeners = new Map();
         this.STORAGE_KEY = "app_settings";
+        this.ipcRenderer = typeof ipcRenderer !== "undefined" ? ipcRenderer : null; // 供桌面歌词样式通知使用
         this.loadSettings();
         this.setupSettingListeners();
         this.setupWindowStateSettings(); // 设置窗口状态记忆
