@@ -135,6 +135,7 @@ body {
   height: 100%;
   overflow-y: auto;
   position: relative;
+  z-index: 1; /* 高于视频背景（z 0），低于侧边栏（z 10） */
   grid-column: 2;
   grid-row: 2;
   overflow-y: auto;

@@ -210,9 +210,11 @@ class App {
     }
 
     setupEventListeners() {
-        // 添加播放歌曲变更事件监听器，用于更新视频按钮状态
+        // 启动时同步背景切换按钮状态（读 background 设置）
+        this.videoPlayerManager.updateVideoButtonState();
+
+        // 播放/切歌时重新同步按钮状态
         this.audioPlayer.audio.addEventListener("play", async () => {
-            // 当歌曲开始播放时，检查并更新视频按钮状态
             await this.videoPlayerManager.updateVideoButtonState();
         });
 

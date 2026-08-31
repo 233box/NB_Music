@@ -496,7 +496,7 @@ class SettingManager {
                     video.style.position = "absolute";
                     video.style.width = "100%";
                     video.style.height = "100%";
-                    video.style.zIndex = "-1";
+                    video.style.zIndex = "0"; // 高于 .mica 背景（半透明 mica），低于内容层（.content z 1 / .sidebar z 10）
                     video.style.bottom = "0";
                     video.style.objectFit = "cover";
                     video.src = currentSong.video;
@@ -532,16 +532,23 @@ class SettingManager {
                         video.addEventListener("remove", () => clearInterval(syncInterval), { once: true });
                     }
 
-                    document.querySelector("body").appendChild(video);
+                    // 挂载到主布局容器：第一个 .mica 是隐藏的 loading 页，必须取含 .content 的那个
+                    const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
+                    const bgHost = mainMica || document.body;
+                    bgHost.appendChild(video);
                 }
                 break;
             }
         }
+
+        // 广播背景切换事件（供播放条背景切换按钮同步状态）
+        window.dispatchEvent(new CustomEvent("app-background-changed", { detail: type }));
     }
 
     // 新增方法：清理所有视频背景
     cleanupVideoBackgrounds() {
-        const oldVideos = document.querySelectorAll("body > video");
+        // 兼容旧挂载点（body）与新挂载点（.mica 主体区）
+        const oldVideos = document.querySelectorAll("body > video, .mica > video");
         oldVideos.forEach((video) => {
             video.pause();
             video.remove();

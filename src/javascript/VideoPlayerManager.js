@@ -202,6 +202,11 @@ class VideoPlayerManager {
             videoDialog.addEventListener("click", this.handleDialogBackgroundClick.bind(this));
         }
 
+        // 背景切换后同步按钮状态（设置面板 / 播放条按钮都会触发）
+        window.removeEventListener("app-background-changed", this.handleBackgroundChanged);
+        this.handleBackgroundChanged = () => this.updateVideoButtonState();
+        window.addEventListener("app-background-changed", this.handleBackgroundChanged);
+
         // 在可能的情况下添加视频播放完毕后自动循环
         if (this.videoPlayer) {
             this.videoPlayer.removeEventListener("ended", this.handleVideoEnded);
@@ -213,12 +218,21 @@ class VideoPlayerManager {
 
     // 事件处理方法，方便移除监听器
     handlePlayButtonClick() {
-        const playVideoBtn = document.getElementById("playVideoBtn");
-        if (playVideoBtn && playVideoBtn.classList.contains("disabled")) {
-            this.uiManager.showNotification("当前歌曲没有可用视频", "warning");
+        // 功能：切换视频背景 / 纯色背景（不再打开视频播放器）
+        const settingManager = this.playlistManager?.settingManager;
+        if (!settingManager) {
+            this.uiManager.showNotification("背景设置不可用", "error");
             return;
         }
-        this.openVideoPlayer();
+        const current = settingManager.getSetting("background");
+        const next = current === "video" ? "none" : "video";
+        settingManager.setSetting("background", next);
+        settingManager.applySettingChange("background", next);
+        this.updateVideoButtonState();
+        this.uiManager.showNotification(
+            next === "video" ? "已切换为视频背景" : "已切换为纯色背景",
+            "info"
+        );
     }
 
     handleCloseDialog() {
@@ -786,40 +800,27 @@ class VideoPlayerManager {
     }
 
     /**
-     * 更新视频播放按钮状态
+     * 更新背景切换按钮状态（读当前 background 设置，不再检查视频可用性）
      */
     async updateVideoButtonState() {
+        const playVideoBtn = document.getElementById("playVideoBtn");
+        if (!playVideoBtn) return;
         try {
-            const playVideoBtn = document.getElementById("playVideoBtn");
-            if (!playVideoBtn) return;
+            const settingManager = this.playlistManager?.settingManager;
+            const isVideoBg = settingManager && settingManager.getSetting("background") === "video";
 
-            // 显示加载状态
-            playVideoBtn.innerHTML = '<i class="bi bi-arrow-repeat rotating"></i>';
-            playVideoBtn.setAttribute("title", "正在检查视频...");
-            playVideoBtn.classList.add("checking");
+            playVideoBtn.classList.remove("checking");
+            playVideoBtn.classList.remove("disabled");
 
-            const hasVideo = await this.checkCurrentSongHasVideo();
-
-            if (hasVideo) {
-                playVideoBtn.classList.remove("disabled");
-                playVideoBtn.classList.remove("checking");
-                playVideoBtn.setAttribute("title", "观看视频");
+            if (isVideoBg) {
+                playVideoBtn.setAttribute("title", "视频背景（点击切换为纯色背景）");
                 playVideoBtn.innerHTML = '<i class="bi bi-film"></i>';
             } else {
-                playVideoBtn.classList.add("disabled");
-                playVideoBtn.classList.remove("checking");
-                playVideoBtn.setAttribute("title", "无可用视频");
+                playVideoBtn.setAttribute("title", "纯色背景（点击切换为视频背景）");
                 playVideoBtn.innerHTML = '<i class="bi bi-film-slash"></i>';
             }
         } catch (error) {
-            console.error("更新视频按钮状态失败:", error);
-            const playVideoBtn = document.getElementById("playVideoBtn");
-            if (playVideoBtn) {
-                playVideoBtn.classList.remove("checking");
-                playVideoBtn.classList.add("disabled");
-                playVideoBtn.setAttribute("title", "视频检查失败");
-                playVideoBtn.innerHTML = '<i class="bi bi-film-slash"></i>';
-            }
+            console.error("更新背景切换按钮状态失败:", error);
         }
     }
 }

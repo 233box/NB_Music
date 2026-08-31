@@ -492,6 +492,17 @@
   transform: translateY(-1px);
 }
 
+/* 大步进按钮（±1s）：字重稍高、透明度略实，与 ±100ms 微调区分 */
+.lyric-offset-btn-lg {
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.lyric-offset-btn-lg:hover {
+  opacity: 1;
+}
+
 .lyric-offset-value {
   font-size: 11px;
   color: var(--text);

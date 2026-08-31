@@ -545,6 +545,8 @@ class UIManager {
     initLyricOffsetControl() {
         const minusBtn = document.getElementById("lyricOffsetMinus");
         const plusBtn = document.getElementById("lyricOffsetPlus");
+        const minusBigBtn = document.getElementById("lyricOffsetMinusBig");
+        const plusBigBtn = document.getElementById("lyricOffsetPlusBig");
         if (!minusBtn || !plusBtn) return;
 
         const adjust = (delta) => {
@@ -556,6 +558,8 @@ class UIManager {
 
         minusBtn.addEventListener("click", () => adjust(-100));
         plusBtn.addEventListener("click", () => adjust(100));
+        minusBigBtn?.addEventListener("click", () => adjust(-1000));
+        plusBigBtn?.addEventListener("click", () => adjust(1000));
         this.updateLyricOffsetDisplay();
     }
 

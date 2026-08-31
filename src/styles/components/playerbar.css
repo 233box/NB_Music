@@ -407,8 +407,26 @@ body.pure-mode .content,
 body.pure-mode .mobile-playlist-backdrop,
 body.pure-mode .mobile-playlist,
 body.pure-mode .mobile-tabbar,
-body.pure-mode .titlebar {
+body.pure-mode .titlebar,
+body.pure-mode .search,
+body.pure-mode .login-btn {
   display: none !important;
+}
+
+/* 纯享模式：主体区（含视频背景）铺满全屏，播放条（z 30）保持在视频之上 */
+body.pure-mode .mica {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  grid-template-columns: 1fr;
+  z-index: 0;
+}
+
+/* 纯享模式：.mica 脱离文档流后，播放条靠 flex 推回底部 */
+body.pure-mode .player-bar {
+  margin-top: auto;
 }
 
 body.pure-mode .bar-cover-img {

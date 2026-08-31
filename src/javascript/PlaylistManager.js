@@ -725,7 +725,7 @@ class PlaylistManager {
                 video.style.position = "absolute";
                 video.style.width = "100%";
                 video.style.height = "100%";
-                video.style.zIndex = "-1";
+                video.style.zIndex = "0"; // 高于 .mica 背景，低于内容层（.content z 1 / .sidebar z 10）
                 video.style.bottom = "0";
                 video.style.objectFit = "cover";
                 video.style.opacity = "0"; // 初始透明度为0
@@ -750,8 +750,10 @@ class PlaylistManager {
                     video.src = videoUrl;
                 }
 
-                // 添加到页面
-                document.querySelector("body").appendChild(video);
+                // 挂载到主布局容器：第一个 .mica 是隐藏的 loading 页，必须取含 .content 的那个
+                const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
+                const bgHost = mainMica || document.body;
+                bgHost.appendChild(video);
 
                 // 确保视频加载完成后立即同步进度并播放
                 video.addEventListener("loadedmetadata", () => {
@@ -858,7 +860,8 @@ class PlaylistManager {
 
     // 确保清理方法可用于其他模块
     cleanupVideoBackgrounds() {
-        const oldVideos = document.querySelectorAll("body > video");
+        // 兼容旧挂载点（body）与新挂载点（.mica 主体区）
+        const oldVideos = document.querySelectorAll("body > video, .mica > video");
         oldVideos.forEach((video) => {
             // 停止播放
             video.pause();
