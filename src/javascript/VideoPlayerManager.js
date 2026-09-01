@@ -218,19 +218,19 @@ class VideoPlayerManager {
 
     // 事件处理方法，方便移除监听器
     handlePlayButtonClick() {
-        // 功能：切换视频背景 / 纯色背景（不再打开视频播放器）
+        // 功能：切换视频背景 / 封面背景（不再打开视频播放器）
         const settingManager = this.playlistManager?.settingManager;
         if (!settingManager) {
             this.uiManager.showNotification("背景设置不可用", "error");
             return;
         }
         const current = settingManager.getSetting("background");
-        const next = current === "video" ? "none" : "video";
+        const next = current === "video" ? "cover" : "video";
         settingManager.setSetting("background", next);
         settingManager.applySettingChange("background", next);
         this.updateVideoButtonState();
         this.uiManager.showNotification(
-            next === "video" ? "已切换为视频背景" : "已切换为纯色背景",
+            next === "video" ? "已切换为视频背景" : "已切换为封面背景",
             "info"
         );
     }
@@ -813,10 +813,10 @@ class VideoPlayerManager {
             playVideoBtn.classList.remove("disabled");
 
             if (isVideoBg) {
-                playVideoBtn.setAttribute("title", "视频背景（点击切换为纯色背景）");
+                playVideoBtn.setAttribute("title", "视频背景（点击切换为封面背景）");
                 playVideoBtn.innerHTML = '<i class="bi bi-film"></i>';
             } else {
-                playVideoBtn.setAttribute("title", "纯色背景（点击切换为视频背景）");
+                playVideoBtn.setAttribute("title", "封面背景（点击切换为视频背景）");
                 playVideoBtn.innerHTML = '<i class="bi bi-film-slash"></i>';
             }
         } catch (error) {
