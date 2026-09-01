@@ -2,7 +2,6 @@
 .sidebar {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: var(--mica); /* 半透明背景，透明度随 Mica 透明度调节 */
   border-right: 1px solid var(--border-1);
   padding: 20px 0;
   grid-column: 1;

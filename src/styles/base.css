@@ -40,7 +40,7 @@ body {
   min-height: 0;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: transparent; /* 空白区域透出封面/视频，半透明层次由各组件背景提供 */
+  background: var(--mica); /* 早期 ECHO 版本观感：整区域半透明蒙黑 + 毛玻璃 */
   position: relative;
   transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

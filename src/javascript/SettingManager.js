@@ -16,7 +16,7 @@ class SettingManager {
         micaOpacity: 0.5, // 默认Mica透明度
         bgBlurAmount: 20, // 默认背景模糊强度
         background: "video",
-        glassEffect: false, // 毛玻璃效果（默认关闭，关闭时所有半透明组件纯半透明）
+        glassEffect: true, // 毛玻璃效果（默认开启，恢复早期 ECHO 版本观感；关闭时纯半透明）
         autoMaximize: false,
 
         fontFamilyCustom: SettingManager.DEFAULT_FONT_FAMILY_CUSTOM,
