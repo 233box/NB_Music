@@ -632,16 +632,16 @@ class SettingManager {
                     // 清除旧视频
                     this.cleanupVideoBackgrounds();
 
-                    // 创建新视频元素
+                    // 创建新视频元素（挂到 body、置于 .mica 之后，让蒙黑毛玻璃罩住视频，与封面模式一致）
                     const video = document.createElement("video");
                     video.autoplay = false; // 不自动播放，等待加载后再播放
                     video.loop = true;
                     video.muted = true;
                     video.playsInline = true;
-                    video.style.position = "absolute";
+                    video.style.position = "fixed";
                     video.style.width = "100%";
                     video.style.height = "100%";
-                    video.style.zIndex = "0"; // 高于 .mica 背景（半透明 mica），低于内容层（.content z 1 / .sidebar z 10）
+                    video.style.zIndex = "-1"; // 低于 .mica，被其半透明蒙黑盖住
                     video.style.bottom = "0";
                     video.style.objectFit = "cover";
                     video.src = currentSong.video;
@@ -677,10 +677,8 @@ class SettingManager {
                         video.addEventListener("remove", () => clearInterval(syncInterval), { once: true });
                     }
 
-                    // 挂载到主布局容器：第一个 .mica 是隐藏的 loading 页，必须取含 .content 的那个
-                    const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
-                    const bgHost = mainMica || document.body;
-                    bgHost.appendChild(video);
+                    // 挂载到 body（.mica 之后）
+                    document.body.appendChild(video);
                 }
                 break;
             }

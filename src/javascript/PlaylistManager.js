@@ -722,10 +722,10 @@ class PlaylistManager {
                 const video = document.createElement("video");
                 // 添加唯一ID，便于后续清理
                 video.id = "background-video-" + Date.now();
-                video.style.position = "absolute";
+                video.style.position = "fixed";
                 video.style.width = "100%";
                 video.style.height = "100%";
-                video.style.zIndex = "0"; // 高于 .mica 背景，低于内容层（.content z 1 / .sidebar z 10）
+                video.style.zIndex = "-1"; // 低于 .mica，被其半透明蒙黑盖住（与封面模式一致）
                 video.style.bottom = "0";
                 video.style.objectFit = "cover";
                 video.style.opacity = "0"; // 初始透明度为0
@@ -750,10 +750,8 @@ class PlaylistManager {
                     video.src = videoUrl;
                 }
 
-                // 挂载到主布局容器：第一个 .mica 是隐藏的 loading 页，必须取含 .content 的那个
-                const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
-                const bgHost = mainMica || document.body;
-                bgHost.appendChild(video);
+                // 挂载到 body（.mica 之后）
+                document.body.appendChild(video);
 
                 // 确保视频加载完成后立即同步进度并播放
                 video.addEventListener("loadedmetadata", () => {
