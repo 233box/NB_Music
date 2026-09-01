@@ -22,6 +22,7 @@ class PlaylistManager {
         this.currentTime = 0;
         this.currentLoadingController = null;
         this.currentPlayingBvid = null;
+        this.requestTimeoutMs = 15000; // 音频加载超时保护（毫秒）
 
         // 'repeat', 'shuffle', 'repeat-one'
         this.playMode = localStorage.getItem("nbmusic_play_mode") || "repeat";
@@ -32,6 +33,12 @@ class PlaylistManager {
         this._autoAdvancing = false;
 
         // 初始化时更新UI显示（同步所有播放模式图标）
+        this.syncPlayModeIcons();
+        this.loadPlaylists();
+    }
+
+    // 同步所有播放模式图标（避免只更新到隐藏的移动端图标）
+    syncPlayModeIcons() {
         const playModeIcons = document.querySelectorAll(".playmode i");
         playModeIcons.forEach((icon) => {
             switch (this.playMode) {
@@ -46,7 +53,6 @@ class PlaylistManager {
                     break;
             }
         });
-        this.loadPlaylists();
     }
 
     togglePlayMode() {
@@ -54,21 +60,8 @@ class PlaylistManager {
         const currentIndex = modes.indexOf(this.playMode);
         this.playMode = modes[(currentIndex + 1) % modes.length];
 
-        // 更新UI（同步所有播放模式图标，避免只更新到隐藏的移动端图标）
-        const playModeIcons = document.querySelectorAll(".playmode i");
-        playModeIcons.forEach((icon) => {
-            switch (this.playMode) {
-                case "shuffle":
-                    icon.className = "bi bi-shuffle";
-                    break;
-                case "repeat":
-                    icon.className = "bi bi-repeat";
-                    break;
-                case "repeat-one":
-                    icon.className = "bi bi-repeat-1";
-                    break;
-            }
-        });
+        // 更新UI（同步所有播放模式图标）
+        this.syncPlayModeIcons();
         // 保存设置
         localStorage.setItem("nbmusic_play_mode", this.playMode);
 
@@ -306,7 +299,15 @@ class PlaylistManager {
         }
     }
 
+    // 获取当前播放歌曲（统一收口，避免各处深层链式访问）
+    getCurrentSong() {
+        return (this.playlist && this.playlist[this.playingNow]) || null;
+    }
+
     async setPlayingNow(index, replay = true, autoPlay = true) {
+        // 切歌动画：进入即标记 body，所有退出路径（含异常/提前返回）结束后 500ms 移除
+        // （原为 UIManager 猴子补丁，收敛到方法内部，避免重复包装）
+        document.body.classList.add("song-changing");
         try {
             if (this.playlist.length === 0) {
                 this.uiManager.showDefaultUi();
@@ -396,6 +397,10 @@ class PlaylistManager {
         } catch (error) {
             console.error("设置当前播放失败:", error);
             document.querySelector(".control>.buttons>.play").classList = "play paused";
+        } finally {
+            setTimeout(() => {
+                document.body.classList.remove("song-changing");
+            }, 500);
         }
     }
 
@@ -844,6 +849,11 @@ class PlaylistManager {
             { once: true }
         );
 
+        // DOM 元素没有原生 remove 事件，上面监听永不触发；
+        // 把同步句柄记到实例字段，由 cleanupVideoBackgrounds 显式清理（防切歌时 audio 监听与定时器泄漏）
+        this._videoSyncs ??= [];
+        this._videoSyncs.push({ video, handlePlay, handlePause, handleSeeking, syncInterval });
+
         // 确保初始状态同步
         if (this.audioPlayer && this.audioPlayer.audio) {
             // 设置初始进度
@@ -858,6 +868,17 @@ class PlaylistManager {
 
     // 确保清理方法可用于其他模块
     cleanupVideoBackgrounds() {
+        // 先清理挂到 audio 上的同步监听与定时器（remove 事件监听不可靠，统一在此显式清理）
+        if (this._videoSyncs) {
+            this._videoSyncs.forEach((s) => {
+                clearInterval(s.syncInterval);
+                this.audioPlayer?.audio?.removeEventListener("play", s.handlePlay);
+                this.audioPlayer?.audio?.removeEventListener("pause", s.handlePause);
+                this.audioPlayer?.audio?.removeEventListener("seeking", s.handleSeeking);
+            });
+            this._videoSyncs = [];
+        }
+
         // 兼容旧挂载点（body）与新挂载点（.mica 主体区）
         const oldVideos = document.querySelectorAll("body > video, .mica > video");
         oldVideos.forEach((video) => {
@@ -897,7 +918,7 @@ class PlaylistManager {
             this.playlistName = name;
             this.savePlaylists();
             this.uiManager.renderPlaylist();
-            this.setPlayingNow(this.playingNow, false);
+            // 仅改名，不重载当前歌曲（原 setPlayingNow 会导致正在播放的曲目重新加载）
         } catch (error) {
             console.error("修改播放列表名称失败:", error);
         }
@@ -912,7 +933,6 @@ class PlaylistManager {
 
             // 保存基本播放列表信息
             localStorage.setItem("nbmusic_playlist", JSON.stringify(this.playlist));
-            localStorage.setItem("nbmusic_playlistname", this.playlistName);
             localStorage.setItem("nbmusic_url_expiry", JSON.stringify(Array.from(this.urlExpiryTimes.entries())));
 
             // 保存当前歌单ID

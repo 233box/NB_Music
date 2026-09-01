@@ -55,8 +55,7 @@ class App {
             // 4. 创建其他依赖UI管理器的组件
             this.favoriteManager = new FavoriteManager(this.playlistManager, this.uiManager);
             this.musicSearcher = new MusicSearcher();
-            this.cacheManager = new CacheManager();
-            this.loginManager = new LoginManager(this.uiManager);
+            this.cacheManager = new CacheManager();            this.loginManager = new LoginManager(this.uiManager);
             this.musiclistManager = new MusiclistManager(this.playlistManager, this.musicSearcher, this.cacheManager, this.loginManager);
             this.updateManager = new UpdateManager();
             this.localImportManager = new LocalImportManager(this.playlistManager, this.uiManager);
@@ -74,7 +73,6 @@ class App {
             this.uiManager.lyricsPlayer = this.lyricsPlayer;
             this.musicSearcher.uiManager = this.uiManager;
             this.musicSearcher.playlistManager = this.playlistManager;
-            this.musicSearcher.favoriteManager = this.favoriteManager;
             this.playlistManager.settingManager = this.settingManager;
             this.playlistManager.musicSearcher = this.musicSearcher;
             this.playlistManager.musiclistManager = this.musiclistManager;
@@ -231,32 +229,6 @@ class App {
             this.uiManager.showWelcomeDialog();
         });
 
-        // 检查更新
-        document.getElementById("check-update")?.addEventListener("click", async (e) => {
-            e.preventDefault();
-            const updateContainer = document.getElementById("update-container");
-            if (updateContainer) {
-                updateContainer.classList.remove("hide");
-            }
-            ipcRenderer.send("check-for-updates");
-        });
-
-        // 更新按钮事件
-        document.getElementById("update-later")?.addEventListener("click", () => {
-            document.getElementById("update-container").classList.add("hide");
-        });
-
-        document.getElementById("update-now")?.addEventListener("click", () => {
-            ipcRenderer.send("install-update");
-        });
-
-        // 关闭更新窗口
-        document.querySelector("#update-container")?.addEventListener("click", (e) => {
-            if (e.target.id === "update-container") {
-                document.getElementById("update-container").classList.add("hide");
-            }
-        });
-
         // 手动搜索歌词：对当前播放歌曲
         document.getElementById("lyricSearchBtn")?.addEventListener("click", async () => {
             const song = this.playlistManager.playlist[this.playlistManager.playingNow];
@@ -303,42 +275,12 @@ class App {
             }
         });
 
-        // 设置更新相关事件监听
-        this.setupUpdateEvents();
+        // 更新流程（检查更新按钮 / 更新事件 / 对话框按钮）统一由 UpdateManager 管理
+        // 渲染侧绑定（字体、版本号）
+        this.setupRendererBindings();
     }
 
-    setupUpdateEvents() {
-        // 更新相关事件监听
-        ipcRenderer.on("update-available", () => {
-            document.getElementById("update-status").textContent = "有新版本可用";
-            document.getElementById("update-actions").classList.remove("hide");
-        });
-
-        ipcRenderer.on("update-not-available", () => {
-            document.getElementById("update-status").textContent = "当前已是最新版本";
-            setTimeout(() => {
-                document.getElementById("update-container").classList.add("hide");
-            }, 2000);
-        });
-
-        ipcRenderer.on("update-error", (event, error) => {
-            document.getElementById("update-status").textContent = `更新检查失败: ${error}`;
-            setTimeout(() => {
-                document.getElementById("update-container").classList.add("hide");
-            }, 3000);
-        });
-
-        ipcRenderer.on("download-progress", (event, percent) => {
-            document.getElementById("update-progress").classList.remove("hide");
-            document.getElementById("progress-percent").textContent = `${Math.round(percent)}%`;
-            document.getElementById("progress-inner").style.width = `${percent}%`;
-        });
-
-        ipcRenderer.on("update-downloaded", () => {
-            document.getElementById("update-status").textContent = "更新已下载完成，准备安装";
-            document.getElementById("update-now").textContent = "立即安装";
-        });
-
+    setupRendererBindings() {
         // 字体加载
         ipcRenderer.on("get-font-family", (event, fontFamily) => {
             document.documentElement.style.setProperty("--font-family", fontFamily);

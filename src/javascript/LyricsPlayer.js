@@ -315,8 +315,9 @@ class LyricsPlayer {
             const lastLyric = lyricData[lyricData.length - 1];
             this.lastLyricTimestamp = lastLyric.lineStart + lastLyric.lineDuration;
 
-            // 尝试检测循环歌曲，延迟执行以确保audio元数据已加载
-            setTimeout(() => this.detectLoopSong(), 2000);
+            // 尝试检测循环歌曲，延迟执行以确保audio元数据已加载（防快速切歌时定时器堆积）
+            clearTimeout(this._loopDetectTimer);
+            this._loopDetectTimer = setTimeout(() => this.detectLoopSong(), 2000);
 
             // 按时间戳配对翻译行（yrc 逐字翻译 / lrc 翻译），附加到对应歌词行
             if (translationString && translationString.trim()) {

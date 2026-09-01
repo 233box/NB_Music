@@ -8,6 +8,8 @@ class EffectManager {
         this.audioPlayer = audioPlayer;
         this.settingManager = settingManager;
         this.audioContext = new AudioContext();
+        // 自动播放策略下 AudioContext 可能处于 suspended，播放前恢复（失败无害）
+        this.audioContext.resume?.().catch?.(() => {});
         this.mediaSource = this.audioContext.createMediaElementSource(audioPlayer.audio);
         this.frequencies = [100, 200, 400, 600, 1000, 3000, 6000, 12000, 14000, 16000];
         this.frequencyFilters = new Object();
@@ -25,6 +27,7 @@ class EffectManager {
          */
         const effectbtn = document.querySelector(".play-container .effect-btn");
         const effectdialog = document.querySelector("#audioEffectDialog");
+        if (!effectbtn || !effectdialog) return; // 元素缺失时跳过绑定，不中断音频链
         const effectdialogcontent = effectdialog.querySelector(".dialog");
         effectbtn.addEventListener("click", () => {
             effectdialog.classList.remove("hide");
@@ -78,6 +81,7 @@ class EffectManager {
         const settings = this.settingManager.settings;
 
         const canvas = document.querySelector("#frequency");
+        if (!canvas) return; // 频谱 canvas 缺失时跳过绘制，不影响音频链
         const canvasCtx = canvas.getContext("2d");
 
         function draw() {
@@ -159,7 +163,6 @@ class EffectManager {
             nodes.push(this.convolver);
         }
         nodes.push(this.analyserNode);
-        console.log(nodes);
         nodes.forEach((element, index) => {
             if (index != nodes.length - 1) {
                 element.connect(nodes[index + 1]);

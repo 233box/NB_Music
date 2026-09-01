@@ -16,6 +16,28 @@ class UpdateManager {
     }
 
     initializeEvents() {
+        // 交互入口：检查更新按钮（关于页）与更新对话框按钮（更新流程事件处理统一收拢在此，避免 script.js 双注册）
+        document.getElementById("check-update")?.addEventListener("click", (e) => {
+            e.preventDefault();
+            this.show();
+            ipcRenderer.send("check-for-updates");
+        });
+
+        document.getElementById("update-later")?.addEventListener("click", () => {
+            this.hide();
+        });
+
+        document.getElementById("update-now")?.addEventListener("click", () => {
+            ipcRenderer.send("install-update");
+        });
+
+        // 点击对话框背景关闭
+        this.container?.addEventListener("click", (e) => {
+            if (e.target.id === "update-container") {
+                this.hide();
+            }
+        });
+
         // 监听主进程发来的更新消息
         ipcRenderer.on("update-error", (_, message) => {
             this.showStatus(`更新检查失败: ${message}`, "error");
@@ -23,26 +45,26 @@ class UpdateManager {
         });
 
         ipcRenderer.on("update-available", () => {
-            this.showStatus("发现新版本,开始下载...");
+            this.showStatus("有新版本可用", "success");
             this.progressWrapper.classList.remove("hide");
+            this.actions.classList.remove("hide");
         });
 
-        ipcRenderer.on("update-not-available", (_, info) => {
-            // 可以处理额外信息，比如开发环境的消息
-            const message = info && info.message ? info.message : "当前已是最新版本";
-            this.showStatus(message, "success");
-            setTimeout(() => this.hide(), 3000);
+        ipcRenderer.on("update-not-available", () => {
+            this.showStatus("当前已是最新版本", "success");
+            setTimeout(() => this.hide(), 2000);
         });
 
         ipcRenderer.on("download-progress", (_, progress) => {
             const percent = Math.round(progress.percent);
+            this.progressWrapper.classList.remove("hide");
             this.progressBar.style.width = `${percent}%`;
             this.progressText.textContent = `${percent}%`;
-            this.showStatus(`正在下载更新...`);
+            this.showStatus("正在下载更新...");
         });
 
         ipcRenderer.on("update-downloaded", () => {
-            this.showStatus("更新已下载完成", "success");
+            this.showStatus("更新已下载完成，准备安装", "success");
             this.progressWrapper.classList.add("hide");
             this.actions.classList.remove("hide");
 
@@ -58,6 +80,7 @@ class UpdateManager {
             updateLaterBtn.parentNode.replaceChild(newUpdateLaterBtn, updateLaterBtn);
 
             // 添加新的事件监听器
+            newUpdateNowBtn.textContent = "立即安装";
             newUpdateNowBtn.addEventListener("click", () => {
                 ipcRenderer.send("install-update");
             });

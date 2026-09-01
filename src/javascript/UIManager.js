@@ -15,7 +15,6 @@ class UIManager {
         this.playlistManager = playlistManager;
         this.favoriteManager = favoriteManager;
         this.musicSearcher = musicSearcher;
-        this.selectedSuggestionIndex = -1;
         this.isMaximized = false;
         this.settingManager = settingManager;
         this.minimizeBtn = document.getElementById("maximize");
@@ -72,7 +71,12 @@ class UIManager {
 
         const suggestionContainer = document.createElement("div");
         suggestionContainer.classList.add("suggestions");
-        document.querySelector(".loading").parentNode.appendChild(suggestionContainer);
+        const loadingEl = document.querySelector(".loading");
+        if (loadingEl?.parentNode) {
+            loadingEl.parentNode.appendChild(suggestionContainer);
+        } else {
+            document.body.appendChild(suggestionContainer);
+        }
 
         let selectedIndex = -1;
         let suggestions = [];
@@ -200,62 +204,12 @@ class UIManager {
             );
         }
 
-        // 为自定义速度选择下拉框添加事件监听
-        const speedControlWrapper = document.querySelector(".speed-control-wrapper");
-        if (speedControlWrapper) {
-            const selectItems = speedControlWrapper.querySelectorAll(".select-item");
-            const selectSelected = speedControlWrapper.querySelector(".select-selected");
-
-            // 点击选中区域时切换下拉框显示状态
-            selectSelected.addEventListener("click", (e) => {
-                e.stopPropagation();
-
-                // 关闭其他所有已打开的下拉框
-                document.querySelectorAll(".select-selected.open").forEach((el) => {
-                    if (el !== selectSelected) {
-                        el.classList.remove("open");
-                        el.nextElementSibling.classList.remove("open");
-                    }
-                });
-
-                // 切换当前下拉框状态
-                selectSelected.classList.toggle("open");
-                selectSelected.nextElementSibling.classList.toggle("open");
-            });
-
-            // 为每个选项添加点击事件
-            selectItems.forEach((item) => {
-                item.addEventListener("click", (e) => {
-                    e.stopPropagation();
-
-                    // 更新UI
-                    selectItems.forEach((el) => el.classList.remove("selected"));
-                    item.classList.add("selected");
-                    selectSelected.textContent = item.textContent;
-
-                    // 关闭下拉框
-                    selectSelected.classList.remove("open");
-                    selectSelected.nextElementSibling.classList.remove("open");
-
-                    // 设置播放速度
-                    const value = item.dataset.value;
-                    if (value && this.audioPlayer) {
-                        this.audioPlayer.audio.playbackRate = parseFloat(value);
-                    }
-                });
-            });
-
-            // 点击页面其他区域时关闭下拉框
-            document.addEventListener("click", () => {
-                selectSelected.classList.remove("open");
-                selectSelected.nextElementSibling.classList.remove("open");
-            });
-        }
+        // 速度下拉框交互由 createCustomSelect 统一处理（含选项点击与全局关闭）
 
         const downloadBtn = document.querySelector(".download");
         downloadBtn?.addEventListener("click", async () => {
             try {
-                const currentSong = this.playlistManager.playlist[this.playlistManager.playingNow];
+                const currentSong = this.playlistManager.getCurrentSong();
                 if (!currentSong) {
                     this.showNotification("没有可下载的音乐", "error");
                     return;
@@ -355,11 +309,6 @@ class UIManager {
             }
         }
 
-        // 主题切换事件
-        this.settingManager.addListener("theme", (newValue) => {
-            document.documentElement.setAttribute("data-theme", newValue);
-        });
-
         // 背景切换事件
         this.settingManager.addListener("background", async (newValue, oldValue) => {
             if (newValue === "none") {
@@ -434,7 +383,7 @@ class UIManager {
         this.settingManager.addListener("lyricSource", async (newValue) => {
             // 如果有当前播放的歌曲，则重新获取歌词并更新显示
             if (this.audioPlayer && this.audioPlayer.lyricsPlayer && this.playlistManager) {
-                const currentSong = this.playlistManager.playlist[this.playlistManager.playingNow];
+                const currentSong = this.playlistManager.getCurrentSong();
                 if (currentSong) {
                     try {
                         // 显示加载状态
@@ -491,23 +440,17 @@ class UIManager {
         // 歌词偏移微调控件（按曲记忆）
         this.initLyricOffsetControl();
 
-        // 进度条控制
-        const progressBar = document.querySelector(".progress-bar");
-        progressBar?.addEventListener("click", (e) => {
-            const rect = progressBar.getBoundingClientRect();
-            const percent = (e.clientX - rect.left) / rect.width;
-            this.audioPlayer.audio.currentTime = percent * this.audioPlayer.audio.duration;
-        });
-        this.audioPlayer.audio.addEventListener("timeupdate", () => {
-            const progress = (this.audioPlayer.audio.currentTime / this.audioPlayer.audio.duration) * 100;
-            document.querySelector(".progress-bar-inner").style.width = `${progress}%`;
-        });
+        // 封面点击切换歌词显示/隐藏（原位于 mobile.js 末尾，桌面端同样生效，归位到 UIManager）
+        const coverImage = document.querySelector(".player-cover");
+        const lyricsContainer = document.getElementById("lyrics-container");
+        if (coverImage && lyricsContainer) {
+            coverImage.addEventListener("click", () => {
+                lyricsContainer.classList.toggle("lyrics-visible");
+                document.querySelector(".player-content")?.classList.toggle("lyrics-hidden");
+            });
+        }
 
-        // 播放时更新进度条
-        this.audioPlayer.audio.addEventListener("timeupdate", () => {
-            const progress = (this.audioPlayer.audio.currentTime / this.audioPlayer.audio.duration) * 100;
-            document.querySelector(".progress-bar-inner").style.width = `${progress}%`;
-        });
+        // 进度条：进度更新统一在 initializeEvents 的 updateProgressDisplay，点击跳转统一在 enhancePlayerControls
 
         // 播放控制按钮（使用事件委托）
         const buttonsContainer = document.querySelector(".buttons");
@@ -549,18 +492,21 @@ class UIManager {
         const plusBigBtn = document.getElementById("lyricOffsetPlusBig");
         if (!minusBtn || !plusBtn) return;
 
-        const adjust = (delta) => {
-            if (!this.lyricsPlayer) return;
-            const v = this.lyricsPlayer.adjustLyricOffset(delta);
-            this.updateLyricOffsetDisplay();
-            this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
-        };
+        const adjust = (delta) => this.adjustLyricOffset(delta);
 
         minusBtn.addEventListener("click", () => adjust(-100));
         plusBtn.addEventListener("click", () => adjust(100));
         minusBigBtn?.addEventListener("click", () => adjust(-1000));
         plusBigBtn?.addEventListener("click", () => adjust(1000));
         this.updateLyricOffsetDisplay();
+    }
+
+    // 歌词偏移微调（按曲记忆）：按钮与键盘快捷键共用
+    adjustLyricOffset(delta) {
+        if (!this.lyricsPlayer) return;
+        const v = this.lyricsPlayer.adjustLyricOffset(delta);
+        this.updateLyricOffsetDisplay();
+        this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
     }
 
     // 更新歌词偏移显示（跟随当前播放歌曲）
@@ -645,13 +591,7 @@ class UIManager {
 
             // 中括号微调歌词偏移（本曲记忆）
             if ((e.key === "[" || e.key === "]") && e.target.tagName !== "INPUT") {
-                if (this.lyricsPlayer) {
-                    const delta = e.key === "[" ? -100 : 100;
-                    const v = this.lyricsPlayer.adjustLyricOffset(delta);
-                    const valueEl = document.getElementById("lyricOffsetValue");
-                    if (valueEl) valueEl.textContent = `${v}ms`;
-                    this.showNotification(`歌词偏移 ${v > 0 ? "+" : ""}${v}ms（本曲已记忆）`, "info");
-                }
+                this.adjustLyricOffset(e.key === "[" ? -100 : 100);
             }
         });
 
@@ -706,11 +646,9 @@ class UIManager {
             // B站音频流 duration 可能不可用（NaN/Infinity），用歌曲数据兜底（导入时的视频时长秒数）
             let dur = audio.duration;
             if (!dur || !isFinite(dur) || dur <= 0) {
-                const pl = this.playlistManager;
-                if (pl && pl.playlist && pl.playlist[pl.playingNow]) {
-                    const sd = pl.playlist[pl.playingNow].duration;
-                    if (sd && sd > 0) dur = sd;
-                }
+                const currentSong = this.playlistManager?.getCurrentSong();
+                const sd = currentSong && currentSong.duration;
+                if (sd && sd > 0) dur = sd;
             }
             if (!dur || !isFinite(dur) || dur <= 0) dur = 0;
             const progress = (audio.currentTime / dur) * 100;
@@ -727,22 +665,13 @@ class UIManager {
         // 初始化立即刷新一次（未播放时也能显示兜底总时长）
         updateProgressDisplay();
 
-        // 进度条点击
-        document.querySelector(".control .progress .progress-bar").addEventListener("click", (event) => {
-            const progressBar = event.currentTarget;
-            const clickPosition = event.offsetX;
-            const progressBarWidth = progressBar.offsetWidth;
-            const progress = (clickPosition / progressBarWidth) * this.audioPlayer.audio.duration;
-            this.audioPlayer.audio.currentTime = progress;
-        });
-
         // 侧边栏点击事件
+        const sidebar = document.querySelector(".sidebar");
         document.addEventListener("dblclick", (event) => {
             if (!event.target.closest(".sidebar") && !event.target.closest(".dock.sidebar") && this.settingManager.getSetting("hideSidebar") === "true") {
-                document.querySelector(".sidebar").style.transition = "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.04, 0.92, 0.4, 0.97)";
-                document.querySelector(".sidebar").parentElement.style.gridTemplateColumns = "0 auto";
-                document.querySelector(".sidebar").style.opacity = "0";
-                // document.querySelector(".sidebar").style.display = "none";
+                sidebar.style.transition = "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.04, 0.92, 0.4, 0.97)";
+                sidebar.parentElement.style.gridTemplateColumns = "0 auto";
+                sidebar.style.opacity = "0";
             }
             if (!event.target.closest(".titbar") && this.settingManager.getSetting("hideTitbar") === "true") {
                 document.querySelectorAll(".titbar .fadein").forEach((fadeItem) => {
@@ -757,48 +686,44 @@ class UIManager {
             });
         });
 
-        // 专为侧边栏设计
-
+        // 侧边栏隐藏时，鼠标移到左缘重新滑出
         window.addEventListener("mousemove", (e) => {
-            if (this.settingManager.getSetting("hideSidebar") == "true") {
-                if (e.clientX < 260 && document.querySelector(".sidebar").style.opacity == "0") {
-                    document.querySelector(".sidebar").style.transition = "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.88, 0.01, 0.95, 0.09)";
-                    document.querySelector(".sidebar").parentElement.style.gridTemplateColumns = "260px auto";
-                    document.querySelector(".sidebar").style.opacity = "1";
+            if (this.settingManager.getSetting("hideSidebar") === "true") {
+                if (e.clientX < 260 && sidebar.style.opacity === "0") {
+                    sidebar.style.transition = "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.88, 0.01, 0.95, 0.09)";
+                    sidebar.parentElement.style.gridTemplateColumns = "260px auto";
+                    sidebar.style.opacity = "1";
                 }
             }
         });
 
         // 列表焦点效果
-        document.querySelectorAll("#function-list").forEach((list) => {
-            list.addEventListener("click", (e) => {
-                const clickedItem = e.target.closest("a");
-                if (!clickedItem) return;
+        document.querySelector("#function-list").addEventListener("click", (e) => {
+            const clickedItem = e.target.closest("a");
+            if (!clickedItem) return;
 
-                const spanFocs = list.querySelector("span.focs");
-                if (!spanFocs) return;
+            const list = e.currentTarget;
+            const spanFocs = list.querySelector("span.focs");
+            if (!spanFocs) return;
 
-                // 移除之前的所有选中状态
-                list.querySelectorAll("a").forEach((a) => a.classList.remove("check"));
-                // 添加新的选中状态
-                clickedItem.classList.add("check");
+            // 移除之前的所有选中状态
+            list.querySelectorAll("a").forEach((a) => a.classList.remove("check"));
+            // 添加新的选中状态
+            clickedItem.classList.add("check");
 
-                // 显示焦点指示器
-                spanFocs.style.display = "block";
-                spanFocs.classList.add("moving");
+            // 显示焦点指示器
+            spanFocs.style.display = "block";
+            spanFocs.classList.add("moving");
 
-                // 设置位置 - 不再使用 transform，直接设置 top
-                if (spanFocs.dataset.type === "abs") {
-                    spanFocs.style.top = clickedItem.offsetTop + 9 + "px";
-                } else {
-                    spanFocs.style.top = clickedItem.offsetTop + 9 + "px";
-                    spanFocs.style.left = clickedItem.offsetLeft + 5 + "px";
-                }
+            // 设置位置（abs 型仅竖线跟随，非 abs 型同步横向偏移）
+            spanFocs.style.top = clickedItem.offsetTop + 9 + "px";
+            if (spanFocs.dataset.type !== "abs") {
+                spanFocs.style.left = clickedItem.offsetLeft + 5 + "px";
+            }
 
-                setTimeout(() => {
-                    spanFocs.classList.remove("moving");
-                }, 500);
-            });
+            setTimeout(() => {
+                spanFocs.classList.remove("moving");
+            }, 500);
         });
 
         document.querySelectorAll("nav").forEach((nav) => {
@@ -948,11 +873,9 @@ class UIManager {
 
         order.forEach((idx) => {
             const song = this.playlistManager.playlist[idx];
-            const div = this.createSongElement(song, song.bvid, {
-                isExtract: true
-            });
+            const div = this.createSongElement(song, song.bvid);
             // 修复: 确保当前播放歌曲存在，并且有有效的bvid值
-            const currentlyPlaying = this.playlistManager.playlist[this.playlistManager.playingNow];
+            const currentlyPlaying = this.playlistManager.getCurrentSong();
             if (currentlyPlaying && currentlyPlaying.bvid === song.bvid) {
                 div.classList.add("playing");
             }
@@ -1233,11 +1156,16 @@ class UIManager {
             selectItems.classList.toggle("open");
         });
 
-        // 点击页面其他区域时关闭下拉框
-        document.addEventListener("click", () => {
-            selectSelected.classList.remove("open");
-            selectItems.classList.remove("open");
-        });
+        // 点击页面其他区域时关闭所有下拉框（单例：仅首次创建时挂一次，避免 N 个实例 N 个监听）
+        if (!UIManager._globalSelectCloseBound) {
+            UIManager._globalSelectCloseBound = true;
+            document.addEventListener("click", () => {
+                document.querySelectorAll(".select-selected.open").forEach((el) => {
+                    el.classList.remove("open");
+                    el.nextElementSibling?.classList.remove("open");
+                });
+            });
+        }
 
         // 在原select位置插入自定义下拉框，并隐藏原select
         selectElement.parentNode.insertBefore(customSelect, selectElement);
@@ -1370,10 +1298,6 @@ class UIManager {
         this.audioPlayer.audio.addEventListener("play", () => this.updateTrayInfo());
         this.audioPlayer.audio.addEventListener("pause", () => this.updateTrayInfo());
 
-        // 修复：不再使用不存在的事件监听方法
-        // 监听歌曲切换时更新托盘信息 - 通过UIManager内部方法调用
-        this.songChangedHandler = () => this.updateTrayInfo();
-
         // 窗口显示/隐藏时也更新托盘
         ipcRenderer.on("window-show", () => this.updateTrayInfo());
         ipcRenderer.on("window-hide", () => this.updateTrayInfo());
@@ -1397,7 +1321,7 @@ class UIManager {
 
             // 如果有正在播放的歌曲，获取其信息
             if (this.playlistManager && this.playlistManager.playlist.length > 0) {
-                const currentSong = this.playlistManager.playlist[this.playlistManager.playingNow];
+                const currentSong = this.playlistManager.getCurrentSong();
                 if (currentSong) {
                     // 根据提取标题的设置决定显示方式
                     const titleMode = this.settingManager.getSetting("extractTitle");
@@ -1548,10 +1472,6 @@ class UIManager {
             // 监听鼠标移动
             progressBar.addEventListener("mousemove", (e) => {
                 const rect = progressBar.getBoundingClientRect();
-                const percent = (e.clientX - rect.left) / rect.width;
-                const duration = this.audioPlayer.audio.duration || 0;
-                // eslint-disable-next-line no-unused-vars
-                const time = duration * percent;
 
                 // 更新时间预览位置和内容
                 timePreview.style.left = `${e.clientX - rect.left}px`;
@@ -1762,25 +1682,7 @@ class UIManager {
             });
         }
 
-        // 歌曲切换时的动画效果
-        if (this.playlistManager) {
-            const originalSetPlayingNow = this.playlistManager.setPlayingNow;
-
-            this.playlistManager.setPlayingNow = async function (index, replay = true, autoPlay = true) {
-                // 添加歌曲切换类
-                document.body.classList.add("song-changing");
-
-                // 调用原始方法
-                const result = await originalSetPlayingNow.call(this, index, replay, autoPlay);
-
-                // 延迟移除类名，以确保动画完成
-                setTimeout(() => {
-                    document.body.classList.remove("song-changing");
-                }, 500);
-
-                return result;
-            };
-        }
+        // 歌曲切换动画类已收敛到 PlaylistManager.setPlayingNow 内部（原此处为猴子补丁）
     }
 }
 

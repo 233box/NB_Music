@@ -7,7 +7,6 @@ class MusicSearcher {
      * 音乐搜索组件
      */
     constructor() {
-        this.COOKIE = "";
         this.settingManager = null; // 将由外部设置
         // 添加歌词缓存对象
         this.lyricsCache = {
@@ -390,8 +389,10 @@ class MusicSearcher {
             list.appendChild(paginationContainer);
         } catch (error) {
             console.error("搜索失败:", error);
-            // eslint-disable-next-line no-undef
-            list.innerHTML = "搜索失败，请重试";
+            // list 在 try 内声明，若在声明前抛错则此处二次 ReferenceError，需判空
+            if (typeof list !== "undefined") {
+                list.innerHTML = "搜索失败，请重试";
+            }
         }
     }
 
@@ -418,13 +419,13 @@ class MusicSearcher {
      * @returns {string|null} 视频ID，未找到则返回null
      */
     extractVideoId(text) {
-        // 从各种格式中提取BV号或AV号
-        const bvMatch = text.match(/BV([A-Za-z0-9]+)/i) || text.match(/\/video\/BV([A-Za-z0-9]+)/i);
+        // 从各种格式中提取BV号或AV号（/BV/ 与 /av/ 已覆盖链接中的同类子串，无需重复匹配）
+        const bvMatch = text.match(/BV([A-Za-z0-9]+)/i);
         if (bvMatch) {
             return `BV${bvMatch[1]}`;
         }
 
-        const avMatch = text.match(/av(\d+)/i) || text.match(/\/video\/av(\d+)/i);
+        const avMatch = text.match(/av(\d+)/i);
         if (avMatch) {
             return `av${avMatch[1]}`;
         }

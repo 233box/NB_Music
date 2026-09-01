@@ -162,55 +162,63 @@ class VideoPlayerManager {
     }
 
     initializeEvents() {
+        // 缓存绑定副本：add/remove 必须用同一引用，否则 removeEventListener 永远移除不掉（原型方法 ≠ bind 副本）
+        this._onPlayBtnClick ??= this.handlePlayButtonClick.bind(this);
+        this._onCloseDialog ??= this.handleCloseDialog.bind(this);
+        this._onFullscreen ??= this.handleFullscreen.bind(this);
+        this._onPip ??= this.handlePictureInPicture.bind(this);
+        this._onKeydown ??= this.handleKeydown.bind(this);
+        this._onDialogBgClick ??= this.handleDialogBackgroundClick.bind(this);
+        this._onVideoEnded ??= this.handleVideoEnded.bind(this);
+
         // 播放视频按钮事件
         const playVideoBtn = document.getElementById("playVideoBtn");
         if (playVideoBtn) {
-            // 防止重复绑定
-            playVideoBtn.removeEventListener("click", this.handlePlayButtonClick);
-            playVideoBtn.addEventListener("click", this.handlePlayButtonClick.bind(this));
+            playVideoBtn.removeEventListener("click", this._onPlayBtnClick);
+            playVideoBtn.addEventListener("click", this._onPlayBtnClick);
         }
 
         // 关闭视频对话框事件
         const closeVideoDialog = document.getElementById("closeVideoDialog");
         if (closeVideoDialog) {
-            closeVideoDialog.removeEventListener("click", this.handleCloseDialog);
-            closeVideoDialog.addEventListener("click", this.handleCloseDialog.bind(this));
+            closeVideoDialog.removeEventListener("click", this._onCloseDialog);
+            closeVideoDialog.addEventListener("click", this._onCloseDialog);
         }
 
         // 全屏按钮事件
         const fullscreenVideo = document.getElementById("fullscreenVideo");
         if (fullscreenVideo) {
-            fullscreenVideo.removeEventListener("click", this.handleFullscreen);
-            fullscreenVideo.addEventListener("click", this.handleFullscreen.bind(this));
+            fullscreenVideo.removeEventListener("click", this._onFullscreen);
+            fullscreenVideo.addEventListener("click", this._onFullscreen);
         }
 
         // 画中画按钮事件
         const pipVideo = document.getElementById("pipVideo");
         if (pipVideo) {
-            pipVideo.removeEventListener("click", this.handlePictureInPicture);
-            pipVideo.addEventListener("click", this.handlePictureInPicture.bind(this));
+            pipVideo.removeEventListener("click", this._onPip);
+            pipVideo.addEventListener("click", this._onPip);
         }
 
         // 视频对话框也可以按ESC关闭
-        document.removeEventListener("keydown", this.handleKeydown);
-        document.addEventListener("keydown", this.handleKeydown.bind(this));
+        document.removeEventListener("keydown", this._onKeydown);
+        document.addEventListener("keydown", this._onKeydown);
 
         // 视频对话框点击背景关闭
         const videoDialog = document.getElementById("videoPlayerDialog");
         if (videoDialog) {
-            videoDialog.removeEventListener("click", this.handleDialogBackgroundClick);
-            videoDialog.addEventListener("click", this.handleDialogBackgroundClick.bind(this));
+            videoDialog.removeEventListener("click", this._onDialogBgClick);
+            videoDialog.addEventListener("click", this._onDialogBgClick);
         }
 
         // 背景切换后同步按钮状态（设置面板 / 播放条按钮都会触发）
-        window.removeEventListener("app-background-changed", this.handleBackgroundChanged);
-        this.handleBackgroundChanged = () => this.updateVideoButtonState();
-        window.addEventListener("app-background-changed", this.handleBackgroundChanged);
+        window.removeEventListener("app-background-changed", this._onBackgroundChanged);
+        this._onBackgroundChanged = () => this.updateVideoButtonState();
+        window.addEventListener("app-background-changed", this._onBackgroundChanged);
 
         // 在可能的情况下添加视频播放完毕后自动循环
         if (this.videoPlayer) {
-            this.videoPlayer.removeEventListener("ended", this.handleVideoEnded);
-            this.videoPlayer.addEventListener("ended", this.handleVideoEnded.bind(this));
+            this.videoPlayer.removeEventListener("ended", this._onVideoEnded);
+            this.videoPlayer.addEventListener("ended", this._onVideoEnded);
         }
 
         console.log("视频播放器事件初始化完成");

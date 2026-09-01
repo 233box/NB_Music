@@ -79,7 +79,7 @@ class AudioPlayer {
                 this.play();
             });
             navigator.mediaSession.setActionHandler("pause", () => {
-                this.play();
+                this.audioPause();
             });
             navigator.mediaSession.setActionHandler("previoustrack", () => {
                 this.prev();

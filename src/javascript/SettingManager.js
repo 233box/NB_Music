@@ -56,7 +56,7 @@ class SettingManager {
         this.settings = { ...SettingManager.DEFAULT_VALUES };
         this.listeners = new Map();
         this.STORAGE_KEY = "app_settings";
-        this.ipcRenderer = typeof ipcRenderer !== "undefined" ? ipcRenderer : null; // 供桌面歌词样式通知使用
+        this.ipcRenderer = ipcRenderer; // 供桌面歌词样式通知使用
         this.loadSettings();
         this.setupSettingListeners();
         this.setupWindowStateSettings(); // 设置窗口状态记忆
@@ -120,12 +120,6 @@ class SettingManager {
         this.listeners.get(settingName).add(callback);
     }
 
-    removeListener(settingName, callback) {
-        if (this.listeners.has(settingName)) {
-            this.listeners.get(settingName).delete(callback);
-        }
-    }
-
     notifyListeners(settingName, newValue, oldValue) {
         if (this.listeners.has(settingName)) {
             this.listeners.get(settingName).forEach((callback) => {
@@ -135,7 +129,7 @@ class SettingManager {
     }
 
     setupSettingListeners() {
-        // 初始化各 nav 开关的 active 状态（与已保存设置一致，覆盖 HTML 写死的 active）
+        // 初始化各 nav 开关的 active 状态（与已保存设置一致，覆盖 HTML 写死的 active）并绑定点击
         document.querySelectorAll("nav a[data-key]").forEach((element) => {
             const key = element.getAttribute("data-key");
             const value = element.getAttribute("data-value");
@@ -144,10 +138,7 @@ class SettingManager {
                 navParent.querySelectorAll("a").forEach((a) => a.classList.remove("active"));
                 element.classList.add("active");
             }
-        });
 
-        // 监听设置选项的点击事件
-        document.querySelectorAll("nav a[data-key]").forEach((element) => {
             element.addEventListener("click", (e) => {
                 const key = e.target.getAttribute("data-key");
                 const value = e.target.getAttribute("data-value");
@@ -770,12 +761,6 @@ class SettingManager {
             if (window.app) {
                 window.app.showWelcomeDialog();
             }
-        });
-        
-        // 查看所有贡献者
-        document.getElementById("view-all-contributors")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            shell.openExternal("https://github.com/NB-Group/NB_Music/graphs/contributors");
         });
     }
 

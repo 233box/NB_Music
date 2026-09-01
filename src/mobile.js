@@ -12,15 +12,20 @@
 
     // 页面加载后初始化
     document.addEventListener("DOMContentLoaded", function () {
+        let mobileUIActive = false;
         if (isMobileDevice()) {
+            mobileUIActive = true;
             initMobileUI();
         }
 
-        // 监听窗口大小改变，以便在设备旋转或桌面端调整窗口大小时响应
+        // 监听窗口大小改变，仅在移动/桌面状态翻转时初始化一次（避免 resize 时事件重复叠加）
         window.addEventListener("resize", function () {
-            if (isMobileDevice()) {
+            const isMobile = isMobileDevice();
+            if (isMobile && !mobileUIActive) {
+                mobileUIActive = true;
                 initMobileUI();
-            } else {
+            } else if (!isMobile && mobileUIActive) {
+                mobileUIActive = false;
                 disableMobileUI();
             }
         });
@@ -522,12 +527,3 @@
         }
     });
 })();
-
-// 添加封面点击事件
-const coverImage = document.querySelector(".player-cover");
-const lyricsContainer = document.getElementById("lyrics-container");
-
-coverImage?.addEventListener("click", () => {
-    lyricsContainer.classList.toggle("lyrics-visible");
-    document.querySelector(".player-content").classList.toggle("lyrics-hidden");
-});

@@ -50,12 +50,13 @@ class MusiclistManager {
     async downloadPlaylist(songs, name) {
         let i = 0;
         let importNotification = this.uiManager.showNotification(`正在下载歌曲: 0/${songs.length}`, "info", { showProgress: true, progress: 0 });
-        await songs.forEach(async (item) => {
+        // 串行下载：原 forEach+async 并发执行，进度计数与完成提示时机都会错乱
+        for (const item of songs) {
             const link = await this.musicSearcher.getAudioLink(item.bvid);
-            link.pop();
-            console.log(link);
+            const baseUrl = link[0];
+            const backupUrl = Array.isArray(link[1]) ? link[1][0] : null;
             const downloadPath = await ipcRenderer.invoke("get-download-path");
-            const data = { folder: path.join(downloadPath, "NB-Music", name), link: link, name: item.title, bvid: item.bvid };
+            const data = { folder: path.join(downloadPath, "NB-Music", name), name: item.title, bvid: item.bvid };
             if (!fs.existsSync(path.join(downloadPath, "NB-Music"))) {
                 fs.mkdirSync(path.join(downloadPath, "NB-Music"));
             }
@@ -64,15 +65,16 @@ class MusiclistManager {
             }
             try {
                 let response = await axios({
-                    url: data.link[0],
+                    url: baseUrl,
                     method: "GET",
                     responseType: "arraybuffer"
                 });
                 const buffer = Buffer.from(response.data); // 进行转换
                 await fs.promises.writeFile(path.join(data.folder, data.name.replace(/[<>:"/\\|?*]+/g, "_") + ".m4a"), buffer);
             } catch {
+                if (!backupUrl) throw new Error("主备音频链接均不可用");
                 let response = await axios({
-                    url: data.link[1][0],
+                    url: backupUrl,
                     method: "GET",
                     responseType: "arraybuffer"
                 });
@@ -88,7 +90,7 @@ class MusiclistManager {
                     }, 1000);
                 }
             }
-        });
+        }
     }
     loadLastPlayedPlaylist() {
         if (this.uiManager && typeof this.uiManager.showDefaultUi === "function") {
@@ -188,15 +190,6 @@ class MusiclistManager {
             const v = c === "x" ? r : (r & 0x3) | 0x8;
             return v.toString(16);
         });
-    }
-
-    ensurePlaylistIds() {
-        this.playlists.forEach((playlist) => {
-            if (!playlist.id) {
-                playlist.id = this.generateUUID();
-            }
-        });
-        this.savePlaylists();
     }
 
     init() {
@@ -804,11 +797,9 @@ class MusiclistManager {
 
         this.renderPlaylistList();
         this.renderSongList();
-        this.playlistManager.shuffledlist = [];
     }
     async importFromBiliFav(mediaId) {
         let importNotification = null;
-        let lyricsNotification = null;
 
         try {
             // 解析收藏夹ID
@@ -909,7 +900,6 @@ class MusiclistManager {
         } catch (error) {
             // 发生错误时移除进度通知
             importNotification?.remove();
-            lyricsNotification?.remove();
 
             // 显示错误消息
             console.error("从B站收藏夹导入失败:", error);
@@ -1025,6 +1015,7 @@ class MusiclistManager {
                 this.uiManager.showNotification('当前歌单已是最新', 'info');
             }
         } catch (error) {
+            console.error("更新收藏夹歌单失败:", error);
             this.uiManager.showNotification(`更新失败: ${error.message}`, 'error');
         } finally {
             this.isUpdating = false; // 重置更新状态
@@ -1136,6 +1127,7 @@ class MusiclistManager {
                 this.uiManager.showNotification('当前歌单已是最新', 'info');
             }
         } catch (error) {
+            console.error("更新合集歌单失败:", error);
             this.uiManager.showNotification(`更新失败: ${error.message}`, 'error');
         } finally {
             if (updateNotification) {
@@ -1228,7 +1220,6 @@ class MusiclistManager {
 
     async importFromBiliSeason(input) {
         let importNotification = null;
-        let lyricsNotification = null;
 
         try {
             // 解析合集ID
@@ -1352,7 +1343,6 @@ class MusiclistManager {
         } catch (error) {
             // 发生错误时移除进度通知
             importNotification?.remove();
-            lyricsNotification?.remove();
 
             console.error("从B站合集导入失败:", error);
             return {
