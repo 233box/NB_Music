@@ -9,10 +9,10 @@ class FavoriteManager {
     constructor(playlistManager, uiManager) {
         this.playlistManager = playlistManager;
         this.uiManager = uiManager;
-        this.initializeLovelist();
-
+        // 只创建一次带渲染回调的可观察数组（原 initializeLovelist 创建后立即被下方覆盖，观察者白建）
         this.lovelist = createObservableArray((change) => {
             const listElement = document.querySelector("#lovelist");
+            if (!listElement) return;
             switch (change.type) {
                 case "set":
                     break;
@@ -21,14 +21,6 @@ class FavoriteManager {
                         this.renderFavoriteList(listElement);
                     }
                     break;
-            }
-        });
-    }
-    initializeLovelist() {
-        this.lovelist = createObservableArray(() => {
-            const listElement = document.querySelector("#lovelist");
-            if (listElement) {
-                this.renderFavoriteList(listElement);
             }
         });
     }
@@ -51,7 +43,7 @@ class FavoriteManager {
             }
         } catch (error) {
             console.error("加载收藏列表失败:", error);
-            this.initializeLovelist(); // 重新初始化
+            this.lovelist.length = 0; // 清空数组、保留观察者（原 initializeLovelist 会把带 switch 的观察者替换成弱化版）
         }
     }
     removeFromFavorites(song) {

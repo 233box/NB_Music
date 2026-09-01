@@ -95,8 +95,7 @@ class AudioPlayer {
             }
             // 新增音量同步逻辑
             if (this.settingManager) {
-                const currentVolume = Math.max(0, this.settingManager.getSetting('volume') / 100);
-                this.audio.volume = currentVolume;
+                this.audio.volume = this.getNormalizedVolume();
             }
             this.isPlayRequestPending = false;
         });
@@ -107,8 +106,7 @@ class AudioPlayer {
             }
             // 新增音量同步逻辑
             if (this.settingManager) {
-                const currentVolume = Math.max(0, this.settingManager.getSetting('volume') / 100);
-                this.audio.volume = currentVolume;
+                this.audio.volume = this.getNormalizedVolume();
             }
         });
     }
@@ -259,8 +257,7 @@ class AudioPlayer {
             this.volumeInterval = null;
         }
         // 使用当前音量设置而不是强制设为1
-        const currentVolume = this.settingManager ? 
-            Math.max(0, this.settingManager.getSetting('volume') / 100) : 1;
+        const currentVolume = this.getNormalizedVolume();
         this.audio.volume = currentVolume;
     
         let prevIndex;
@@ -293,8 +290,7 @@ class AudioPlayer {
             this.volumeInterval = null;
         }
         // 使用当前音量设置而不是强制设为1
-        const currentVolume = this.settingManager ? 
-            Math.max(0, this.settingManager.getSetting('volume') / 100) : 1;
+        const currentVolume = this.getNormalizedVolume();
         this.audio.volume = currentVolume;
     
         let nextIndex;

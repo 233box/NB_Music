@@ -23,8 +23,6 @@ class LyricsPlayer {
         }
         this.parsedData = this.parseLyrics(lyricsString);
         this.audio = audioElement;
-        this.activeLines = new Set();
-        this.completedLines = new Set();
         this.animationFrame = null;
         this.lastScrollTime = Date.now();
         this.settingManager = settingManager;
@@ -180,8 +178,6 @@ class LyricsPlayer {
 
     setVisibility(visible) {
         if (this.lyricsContainer) {
-            // this.lyricsContainer.style.opacity = visible ? '1' : '0';
-            // this.lyricsContainer.style.width = visible ? '' : '0';
             this.lyricsContainer.style.display = visible ? "" : "none";
 
             // 如果正在显示并且容器可见，刷新布局
@@ -193,8 +189,6 @@ class LyricsPlayer {
 
     changeLyrics(newLyricsString) {
         this.stop();
-        this.activeLines.clear();
-        this.completedLines.clear();
         this.activeLineIndex = -1;
         this.previousActiveIndex = -1;
         this.scrollWrapper.innerHTML = "";
@@ -445,10 +439,6 @@ class LyricsPlayer {
 
     // 重置歌词状态，用于循环开始时
     resetLyricsState() {
-        // 清除所有激活状态
-        this.activeLines.clear();
-        this.completedLines.clear();
-
         // 重置行索引
         this.activeLineIndex = -1;
         this.previousActiveIndex = -1;
@@ -483,8 +473,6 @@ class LyricsPlayer {
     }
 
     onSeek() {
-        this.activeLines.clear();
-        this.completedLines.clear();
         this.previousActiveIndex = -1;
 
         // 快进/拖动时瞬间定位，禁用平滑滚动（避免长距离滚动动画）
@@ -547,7 +535,6 @@ class LyricsPlayer {
 
                 const chars = Array.from(line.children);
                 let hasActiveChar = false;
-                let allCompleted = true;
 
                 data.chars.forEach((char, index) => {
                     const charElement = chars[index];
@@ -564,7 +551,6 @@ class LyricsPlayer {
                         }
                         hasActiveChar = true;
                         anyCharActive = true;
-                        allCompleted = false;
                     } else if (currentTime > charEndTime) {
                         if (this.isVisible) {
                             charElement.classList.remove("active");
@@ -574,17 +560,12 @@ class LyricsPlayer {
                         if (this.isVisible) {
                             charElement.classList.remove("active", "completed");
                         }
-                        allCompleted = false;
                     }
                 });
 
                 // 如果这一行有激活字符，将其标记为激活行，使用lyricIndex，确保行号正确
                 if (hasActiveChar) {
                     activeLineFound = lyricIndex;
-                }
-
-                if (allCompleted) {
-                    this.completedLines.add(lyricIndex);
                 }
 
                 // 只增加歌词索引计数器
@@ -653,28 +634,6 @@ class LyricsPlayer {
             const targetScrollTop = targetLine.offsetTop - this.scrollWrapper.clientHeight / 2 + targetLine.offsetHeight / 2;
             this.scrollWrapper.scrollTop = Math.max(0, targetScrollTop);
         }
-    }
-
-    // 对单个行应用瀑布效果
-    applyWaterfallEffect(lineElement, lineIndex, activeIndex) {
-        const containerHeight = this.lyricsContainer.clientHeight;
-        const distance = activeIndex - lineIndex;
-
-        // 根据到活跃行的距离计算位置
-        let position;
-        if (distance === 1) {
-            position = containerHeight / 2 - lineElement.offsetHeight / 2 - 60;
-            lineElement.classList.add("before-1");
-        } else if (distance === 2) {
-            position = containerHeight / 2 - lineElement.offsetHeight / 2 - 110;
-            lineElement.classList.add("before-2");
-        } else {
-            position = containerHeight / 2 - lineElement.offsetHeight / 2 - 160;
-            lineElement.classList.add("before-3");
-        }
-
-        // 应用位置
-        lineElement.style.top = `${position}px`;
     }
 
     initVisibilityObserver() {
@@ -1038,15 +997,6 @@ class LyricsPlayer {
         }
 
         return this.getCurrentLyricOffset();
-    }
-
-    // 暂停时手动刷新歌词高亮（如切歌、调整偏移后）
-    refreshLyrics() {
-        if (this.animationFrame) return;
-        this.start();
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => this.stop());
-        });
     }
 
     // 添加启动后台同步的方法

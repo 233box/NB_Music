@@ -86,24 +86,14 @@ class SidebarResizer {
      */
     saveSidebarWidth() {
         const currentWidth = this.sidebar.offsetWidth;
-        if (this.settingManager) {
-            this.settingManager.setSetting("sidebarWidth", currentWidth);
-        } else {
-            localStorage.setItem("nbmusic_sidebar_width", currentWidth);
-        }
+        this.settingManager.setSetting("sidebarWidth", currentWidth);
     }
 
     /**
      * 恢复保存的侧栏宽度
      */
     restoreSidebarWidth() {
-        let savedWidth;
-
-        if (this.settingManager) {
-            savedWidth = this.settingManager.getSetting("sidebarWidth");
-        } else {
-            savedWidth = localStorage.getItem("nbmusic_sidebar_width");
-        }
+        const savedWidth = this.settingManager.getSetting("sidebarWidth");
 
         if (savedWidth) {
             const width = parseInt(savedWidth);

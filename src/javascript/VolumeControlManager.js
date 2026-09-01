@@ -69,10 +69,6 @@
             this.audioPlayer.audio.volume = normalizedVolume;
         }
     }
-
-    getVolume() {
-        return this.volume;
-    }
 }
 
 module.exports = VolumeControlManager;

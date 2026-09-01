@@ -810,7 +810,7 @@ class VideoPlayerManager {
     /**
      * 更新背景切换按钮状态（读当前 background 设置，不再检查视频可用性）
      */
-    async updateVideoButtonState() {
+    updateVideoButtonState() {
         const playVideoBtn = document.getElementById("playVideoBtn");
         if (!playVideoBtn) return;
         try {
