@@ -133,3 +133,15 @@ html.no-glass * {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* 玻璃蒙层：盖在视频/封面清晰层之上、内容区之下，使 Mica 透明度在背景模式下仍可见 */
+.mica-glass-shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  background: var(--mica);
+  pointer-events: none;
+}

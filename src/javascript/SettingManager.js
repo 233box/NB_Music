@@ -607,28 +607,23 @@ class SettingManager {
         // 切换背景类型
         switch (type) {
             case "none": {
-                // 移除视频与封面背景
+                // 移除视频背景
                 this.cleanupVideoBackgrounds();
-                this.cleanupCoverBackgrounds();
                 document.querySelector("html").style.removeProperty("--bgul");
                 break;
             }
             case "cover": {
-                // 移除视频背景，设置封面背景
+                // 封面背景：html 背景被 .mica 半透明层蒙住，透明度随 Mica 透明度调节
                 this.cleanupVideoBackgrounds();
-                this.cleanupCoverBackgrounds();
                 const coverSong = getSongInfo();
                 if (coverSong && coverSong.poster) {
                     document.querySelector("html").style.setProperty("--bgul", `url(${coverSong.poster})`);
-                    // 封面作为清晰底层（与视频背景同层级），避免被毛玻璃模糊造成模式差异
-                    this.setupCoverLayer(coverSong.poster);
                 }
                 break;
             }
             case "video": {
                 // 视频背景：不显示封面残留
                 document.querySelector("html").style.removeProperty("--bgul");
-                this.cleanupCoverBackgrounds();
                 // 设置视频背景
                 const currentSong = getSongInfo();
                 const currentTime = getCurrentAudioTime();
@@ -686,6 +681,9 @@ class SettingManager {
                     const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
                     const bgHost = mainMica || document.body;
                     bgHost.appendChild(video);
+
+                    // 视频上盖玻璃蒙层，与封面模式（.mica 半透明蒙住封面）表现一致
+                    this.refreshGlassShade();
                 }
                 break;
             }
@@ -703,29 +701,24 @@ class SettingManager {
             video.pause();
             video.remove();
         });
+        // 视频移除后同步清理玻璃蒙层
+        this.refreshGlassShade();
     }
 
-    // 创建或更新封面清晰层（与视频背景同挂载点、同层级，z-index 0）
-    setupCoverLayer(src) {
-        let cover = document.querySelector(".mica > .bg-cover-layer");
-        if (!cover) {
-            cover = document.createElement("img");
-            cover.className = "bg-cover-layer";
-            cover.style.position = "absolute";
-            cover.style.width = "100%";
-            cover.style.height = "100%";
-            cover.style.zIndex = "0"; // 高于 .mica 背景，低于内容层
-            cover.style.bottom = "0";
-            cover.style.objectFit = "cover";
-            const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
-            (mainMica || document.body).appendChild(cover);
+    // 玻璃蒙层：视频存在时盖在其上（z 0，DOM 在 video 后），使 Mica 透明度对视频模式同样可见
+    // 封面模式无需蒙层：html 封面背景天然位于 .mica 半透明背景之下
+    refreshGlassShade() {
+        const hasVideo = document.querySelector("body > video, .mica > video");
+        const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
+        const host = mainMica || document.body;
+        let shade = host.querySelector(":scope > .mica-glass-shade");
+        if (hasVideo && !shade) {
+            shade = document.createElement("div");
+            shade.className = "mica-glass-shade";
+            host.appendChild(shade); // 在 video 之后插入 → 盖住视频
+        } else if (!hasVideo && shade) {
+            shade.remove();
         }
-        cover.src = src;
-    }
-
-    // 清理封面清晰层
-    cleanupCoverBackgrounds() {
-        document.querySelectorAll(".mica > .bg-cover-layer, body > .bg-cover-layer").forEach((el) => el.remove());
     }
 
     // 毛玻璃开关：关闭（默认）时加 no-glass，所有 backdrop-filter 失效
