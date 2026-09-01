@@ -16,6 +16,7 @@ class SettingManager {
         micaOpacity: 0.5, // 默认Mica透明度
         bgBlurAmount: 20, // 默认背景模糊强度
         background: "video",
+        glassEffect: false, // 毛玻璃效果（默认关闭，关闭时所有半透明组件纯半透明）
         autoMaximize: false,
 
         fontFamilyCustom: SettingManager.DEFAULT_FONT_FAMILY_CUSTOM,
@@ -134,6 +135,17 @@ class SettingManager {
     }
 
     setupSettingListeners() {
+        // 初始化各 nav 开关的 active 状态（与已保存设置一致，覆盖 HTML 写死的 active）
+        document.querySelectorAll("nav a[data-key]").forEach((element) => {
+            const key = element.getAttribute("data-key");
+            const value = element.getAttribute("data-value");
+            if (String(this.settings[key]) === value) {
+                const navParent = element.parentElement;
+                navParent.querySelectorAll("a").forEach((a) => a.classList.remove("active"));
+                element.classList.add("active");
+            }
+        });
+
         // 监听设置选项的点击事件
         document.querySelectorAll("nav a[data-key]").forEach((element) => {
             element.addEventListener("click", (e) => {
@@ -304,6 +316,7 @@ class SettingManager {
             });
         }
         this.applyCustomColors();
+        this.applyGlassEffect();
 
         // 桌面歌词颜色选择器
         const desktopLyricsColorPicker = document.getElementById("desktopLyricsColor");
@@ -504,6 +517,9 @@ class SettingManager {
                 // 应用背景设置
                 this.applyBackground(value);
                 break;
+            case "glassEffect":
+                this.applyGlassEffect();
+                break;
             case "primaryColor":
             case "secondaryColor":
                 this.applyThemeColors();
@@ -588,23 +604,28 @@ class SettingManager {
         // 切换背景类型
         switch (type) {
             case "none": {
-                // 移除视频背景
+                // 移除视频与封面背景
                 this.cleanupVideoBackgrounds();
+                this.cleanupCoverBackgrounds();
                 document.querySelector("html").style.removeProperty("--bgul");
                 break;
             }
             case "cover": {
                 // 移除视频背景，设置封面背景
                 this.cleanupVideoBackgrounds();
+                this.cleanupCoverBackgrounds();
                 const coverSong = getSongInfo();
                 if (coverSong && coverSong.poster) {
                     document.querySelector("html").style.setProperty("--bgul", `url(${coverSong.poster})`);
+                    // 封面作为清晰底层（与视频背景同层级），避免被毛玻璃模糊造成模式差异
+                    this.setupCoverLayer(coverSong.poster);
                 }
                 break;
             }
             case "video": {
                 // 视频背景：不显示封面残留
                 document.querySelector("html").style.removeProperty("--bgul");
+                this.cleanupCoverBackgrounds();
                 // 设置视频背景
                 const currentSong = getSongInfo();
                 const currentTime = getCurrentAudioTime();
@@ -679,6 +700,39 @@ class SettingManager {
             video.pause();
             video.remove();
         });
+    }
+
+    // 创建或更新封面清晰层（与视频背景同挂载点、同层级，z-index 0）
+    setupCoverLayer(src) {
+        let cover = document.querySelector(".mica > .bg-cover-layer");
+        if (!cover) {
+            cover = document.createElement("img");
+            cover.className = "bg-cover-layer";
+            cover.style.position = "absolute";
+            cover.style.width = "100%";
+            cover.style.height = "100%";
+            cover.style.zIndex = "0"; // 高于 .mica 背景，低于内容层
+            cover.style.bottom = "0";
+            cover.style.objectFit = "cover";
+            const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
+            (mainMica || document.body).appendChild(cover);
+        }
+        cover.src = src;
+    }
+
+    // 清理封面清晰层
+    cleanupCoverBackgrounds() {
+        document.querySelectorAll(".mica > .bg-cover-layer, body > .bg-cover-layer").forEach((el) => el.remove());
+    }
+
+    // 毛玻璃开关：关闭（默认）时加 no-glass，所有 backdrop-filter 失效
+    applyGlassEffect() {
+        const root = document.documentElement;
+        if (this.settings.glassEffect) {
+            root.classList.remove("no-glass");
+        } else {
+            root.classList.add("no-glass");
+        }
     }
 
     clearCache() {

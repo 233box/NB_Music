@@ -125,3 +125,11 @@
 
   --brightness: 0.8;
 }
+
+/* 毛玻璃开关：html.no-glass 时所有半透明组件退化为纯半透明
+   （视频/封面背景模式下表现一致，不再有 backdrop-filter 模糊差异） */
+html.no-glass,
+html.no-glass * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

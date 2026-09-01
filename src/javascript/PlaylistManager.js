@@ -717,6 +717,10 @@ class PlaylistManager {
             document.documentElement.style.removeProperty("--bgul");
             // 更严格地清理所有现有视频元素
             this.cleanupVideoBackgrounds();
+            // 清理封面清晰层，避免与视频叠放
+            if (this.settingManager.cleanupCoverBackgrounds) {
+                this.settingManager.cleanupCoverBackgrounds();
+            }
 
             try {
                 const video = document.createElement("video");
@@ -786,6 +790,13 @@ class PlaylistManager {
                 // 发生错误时回退到封面背景
                 document.documentElement.style.setProperty("--bgul", "url(" + song.poster + ")");
             }
+        } else if (this.settingManager.getSetting("background") === "cover" && song.poster) {
+            // 封面背景：更新封面清晰层（与视频背景同层级，毛玻璃开关下表现一致）
+            this.cleanupVideoBackgrounds();
+            if (this.settingManager.cleanupCoverBackgrounds) {
+                this.settingManager.cleanupCoverBackgrounds();
+            }
+            this.settingManager.setupCoverLayer(song.poster);
         }
     }
 
