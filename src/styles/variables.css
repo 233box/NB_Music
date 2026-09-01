@@ -43,12 +43,12 @@
 
 /* 深色主题变量 */
 :root.dark {
-  --color-1: #fff;
+  --color-1: var(--text);
   --color-2: #ff3b30;
   --color-3: #444444;
   --rgba-4: rgba(28, 28, 28, 0.5);
   --rgba-5: rgba(0, 0, 0, 0.3);
-  --rgba-6: rgba(255, 255, 255, 0.7);
+  --rgba-6: rgba(var(--custom-text-rgb, 255, 255, 255), 0.7);
   --rgba-7: rgba(0, 0, 0, 1);
   --rgba-8: rgba(0, 0, 0, 0);
   --rgba-9: rgba(255, 255, 255, 0.3);
@@ -59,23 +59,23 @@
   --color-14: #000;
   --rgba-15: rgba(30, 215, 96, 0.2);
   --rgba-16: rgba(255, 255, 255, 0.05);
-  --mica: rgb(18 18 18 / var(--mica-opacity));
+  --mica: rgba(var(--custom-bg-rgb, 18, 18, 18), var(--mica-opacity));
   --color-17: #111;
   --color-18: #eee;
   --color-19: #6a11cb;
   --color-20: #2575fc;
   --theme-1: var(--primary-color);
   --theme-2: var(--secondary-color);
-  --text: #ffffff;
-  --bg-1: rgba(28, 28, 28, 0.95);
-  --border-1: rgba(255, 255, 255, 0.1);
-  --bg50: rgba(28, 28, 28, 0.5);
-  --bg70: rgba(28, 28, 28, 0.7);
-  --bg: rgba(28, 28, 28, 1);
+  --text: var(--custom-text, #ffffff);
+  --bg-1: rgba(var(--custom-bg-rgb, 28, 28, 28), 0.95);
+  --border-1: var(--custom-border, rgba(255, 255, 255, 0.1));
+  --bg50: rgba(var(--custom-bg-rgb, 28, 28, 28), 0.5);
+  --bg70: rgba(var(--custom-bg-rgb, 28, 28, 28), 0.7);
+  --bg: rgba(var(--custom-bg-rgb, 28, 28, 28), 1);
   --sd: rgba(0, 0, 0, 0.3);
   --s3d: rgba(0, 0, 0, 0.2);
-  --hover: rgba(255, 255, 255, 0.15);
-  --hover-half: rgba(255, 255, 255, 0.07);
+  --hover: rgba(var(--custom-text-rgb, 255, 255, 255), 0.15);
+  --hover-half: rgba(var(--custom-text-rgb, 255, 255, 255), 0.07);
   --error: #ff3b30;
   --success: #4caf50;
   --warning: #ff9500;
@@ -86,7 +86,7 @@
 
 /* 浅色主题变量 */
 :root.light {
-  --color-1: #222222;
+  --color-1: var(--text);
   --color-2: #dc3545;
   --color-3: #666666;
   --color-14: #ffffff;
@@ -94,7 +94,7 @@
   --color-18: #333333;
   --rgba-4: rgba(240, 240, 240, 0.95);
   --rgba-5: rgba(0, 0, 0, 0.1);
-  --rgba-6: rgba(0, 0, 0, 0.7);
+  --rgba-6: rgba(var(--custom-text-rgb, 0, 0, 0), 0.7);
   --rgba-7: rgba(255, 255, 255, 1);
   --rgba-8: rgba(255, 255, 255, 0);
   --rgba-9: rgba(0, 0, 0, 0.1);
@@ -108,17 +108,17 @@
   --theme-2: var(--secondary-color);
   --color-19: #f3e5f5;
   --color-20: #e3f2fd;
-  --text: #222222;
-  --bg-1: rgba(255, 255, 255, 0.95);
-  --border-1: rgba(0, 0, 0, 0.1);
-  --mica: rgb(255 255 255 / var(--mica-opacity));
-  --bg50: rgba(255, 255, 255, 0.5);
-  --bg70: rgba(255, 255, 255, 0.7);
-  --bg: rgba(255, 255, 255, 1);
+  --text: var(--custom-text, #222222);
+  --bg-1: rgba(var(--custom-bg-rgb, 255, 255, 255), 0.95);
+  --border-1: var(--custom-border, rgba(0, 0, 0, 0.1));
+  --mica: rgba(var(--custom-bg-rgb, 255, 255, 255), var(--mica-opacity));
+  --bg50: rgba(var(--custom-bg-rgb, 255, 255, 255), 0.5);
+  --bg70: rgba(var(--custom-bg-rgb, 255, 255, 255), 0.7);
+  --bg: rgba(var(--custom-bg-rgb, 255, 255, 255), 1);
   --sd: rgba(0, 0, 0, 0.1);
   --s3d: rgba(0, 0, 0, 0.08);
-  --hover: rgba(0, 0, 0, 0.06);
-  --hover-half: rgba(0, 0, 0, 0.03);
+  --hover: rgba(var(--custom-text-rgb, 0, 0, 0), 0.06);
+  --hover-half: rgba(var(--custom-text-rgb, 0, 0, 0), 0.03);
   --error: #dc3545;
   --success: #198754;
   --warning: #ffc107;

@@ -664,6 +664,50 @@
               </div>
             </div>
 
+            <!-- 界面基础色 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <i class="bi bi-brush-fill"></i>
+                <div class="words">
+                  <div class="setting-name">界面颜色</div>
+                  <div class="setting-descrition">自定义背景、文字与边框颜色，留空跟随主题</div>
+                </div>
+              </div>
+              <div class="setting-value color-pickers">
+                <div class="color-picker-group">
+                  <label>背景:</label>
+                  <input type="color" id="customBgColor" class="color-picker" />
+                </div>
+                <div class="color-picker-group">
+                  <label>文字:</label>
+                  <input type="color" id="customTextColor" class="color-picker" />
+                </div>
+                <div class="color-picker-group">
+                  <label>边框:</label>
+                  <input type="color" id="customBorderColor" class="color-picker" />
+                </div>
+                <button id="resetCustomColors" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
+              </div>
+            </div>
+
+            <!-- 歌词颜色 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <i class="bi bi-music-note-beamed"></i>
+                <div class="words">
+                  <div class="setting-name">歌词颜色</div>
+                  <div class="setting-descrition">设置主界面歌词高亮行与逐字动画颜色，默认跟随次色</div>
+                </div>
+              </div>
+              <div class="setting-value color-pickers">
+                <div class="color-picker-group">
+                  <label>高亮:</label>
+                  <input type="color" id="lyricHighlightColor" class="color-picker" />
+                </div>
+                <button id="resetLyricColor" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
+              </div>
+            </div>
+
             <!-- 桌面歌词颜色 -->
             <div class="setting-item">
               <div class="setting-info">
@@ -735,7 +779,6 @@
                 <nav data-nav-id="nav2">
                   <a class="active" data-key="background" data-value="cover">封面</a>
                   <a data-key="background" data-value="video">视频</a>
-                  <a data-key="background" data-value="none">无</a>
                 </nav>
               </div>
             </div>

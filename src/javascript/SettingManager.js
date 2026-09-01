@@ -28,6 +28,10 @@ class SettingManager {
         desktopLyricsEnabled: false,
         desktopLyricsColor: "#7eb8ff", // 桌面歌词当前行颜色
         desktopLyricsTranslationColor: "#aab2c0", // 桌面歌词翻译行颜色
+        customBgColor: null, // 界面背景色（null = 跟随主题）
+        customTextColor: null, // 界面文字色（null = 跟随主题）
+        customBorderColor: null, // 界面边框色（null = 跟随主题）
+        lyricHighlightColor: null, // 主界面歌词高亮色（null = 跟随次色）
         fadeEnabled: true, // 音频淡入淡出效果
 
         lyricSearchType: "custom",
@@ -77,6 +81,11 @@ class SettingManager {
                 for (const k in parsed)
                     if (Object.prototype.hasOwnProperty.call(parsed, k))
                         this.settings[k] = parsed[k];
+            }
+            // 纯色背景已废弃，旧数据自动迁移为封面背景
+            if (this.settings.background === "none") {
+                this.settings.background = "cover";
+                this.saveSettings();
             }
         } catch (error) {
             console.error("加载设置失败:", error);
@@ -236,6 +245,66 @@ class SettingManager {
         // 初始应用主题色
         this.applyThemeColors();
 
+        // 界面基础色（背景/文字/边框）：null = 跟随当前主题
+        const customBgPicker = document.getElementById("customBgColor");
+        const customTextPicker = document.getElementById("customTextColor");
+        const customBorderPicker = document.getElementById("customBorderColor");
+        const isDark = document.documentElement.className !== "light";
+        const bgDef = isDark ? "#1c1c1c" : "#ffffff";
+        const textDef = isDark ? "#ffffff" : "#222222";
+        const borderDef = isDark ? "#ffffff" : "#000000";
+
+        const bindCustomPicker = (picker, key, def) => {
+            if (!picker) return;
+            picker.value = this.settings[key] || def;
+            picker.addEventListener("change", (e) => {
+                this.setSetting(key, e.target.value);
+                this.applyCustomColors();
+            });
+        };
+        bindCustomPicker(customBgPicker, "customBgColor", bgDef);
+        bindCustomPicker(customTextPicker, "customTextColor", textDef);
+        bindCustomPicker(customBorderPicker, "customBorderColor", borderDef);
+
+        const resetCustomColorsBtn = document.getElementById("resetCustomColors");
+        if (resetCustomColorsBtn) {
+            resetCustomColorsBtn.addEventListener("click", () => {
+                this.setSetting("customBgColor", null);
+                this.setSetting("customTextColor", null);
+                this.setSetting("customBorderColor", null);
+                if (customBgPicker) customBgPicker.value = bgDef;
+                if (customTextPicker) customTextPicker.value = textDef;
+                if (customBorderPicker) customBorderPicker.value = borderDef;
+                this.applyCustomColors();
+                if (this.uiManager) {
+                    this.uiManager.showNotification("界面颜色已重置", "success");
+                }
+            });
+        }
+
+        // 歌词高亮色（主界面）：null = 跟随次色
+        const lyricColorPicker = document.getElementById("lyricHighlightColor");
+        if (lyricColorPicker) {
+            lyricColorPicker.value = this.settings.lyricHighlightColor || this.settings.secondaryColor || "#3b91d8";
+            lyricColorPicker.addEventListener("change", (e) => {
+                this.setSetting("lyricHighlightColor", e.target.value);
+                this.applyCustomColors();
+            });
+        }
+
+        const resetLyricColorBtn = document.getElementById("resetLyricColor");
+        if (resetLyricColorBtn) {
+            resetLyricColorBtn.addEventListener("click", () => {
+                this.setSetting("lyricHighlightColor", null);
+                if (lyricColorPicker) lyricColorPicker.value = this.settings.secondaryColor || "#3b91d8";
+                this.applyCustomColors();
+                if (this.uiManager) {
+                    this.uiManager.showNotification("歌词颜色已重置", "success");
+                }
+            });
+        }
+        this.applyCustomColors();
+
         // 桌面歌词颜色选择器
         const desktopLyricsColorPicker = document.getElementById("desktopLyricsColor");
         const desktopLyricsTransColorPicker = document.getElementById("desktopLyricsTranslationColor");
@@ -334,6 +403,62 @@ class SettingManager {
         const root = document.documentElement;
         root.style.setProperty("--primary-color", this.settings.primaryColor);
         root.style.setProperty("--secondary-color", this.settings.secondaryColor);
+    }
+
+    // 应用自定义基础色与歌词色（null 时移除覆盖，回退主题默认）
+    applyCustomColors() {
+        const root = document.documentElement;
+
+        const bg = this.settings.customBgColor;
+        if (bg) {
+            root.style.setProperty("--custom-bg-rgb", this.hexToRgbString(bg));
+        } else {
+            root.style.removeProperty("--custom-bg-rgb");
+        }
+
+        const text = this.settings.customTextColor;
+        if (text) {
+            root.style.setProperty("--custom-text", text);
+            root.style.setProperty("--custom-text-rgb", this.hexToRgbString(text));
+        } else {
+            root.style.removeProperty("--custom-text");
+            root.style.removeProperty("--custom-text-rgb");
+        }
+
+        const border = this.settings.customBorderColor;
+        if (border) {
+            root.style.setProperty("--custom-border", border);
+        } else {
+            root.style.removeProperty("--custom-border");
+        }
+
+        const lyric = this.settings.lyricHighlightColor;
+        if (lyric) {
+            root.style.setProperty("--lyric-highlight", lyric);
+            root.style.setProperty("--lyric-highlight-rgb", this.hexToRgbString(lyric));
+            root.style.setProperty("--lyric-grad-a", this.mixWithWhite(lyric, 0.85));
+            root.style.setProperty("--lyric-grad-b", lyric);
+        } else {
+            root.style.removeProperty("--lyric-highlight");
+            root.style.removeProperty("--lyric-highlight-rgb");
+            root.style.removeProperty("--lyric-grad-a");
+            root.style.removeProperty("--lyric-grad-b");
+        }
+    }
+
+    // "#rrggbb" → "r, g, b"（供 rgba(var(...), alpha) 衍生透明度）
+    hexToRgbString(hex) {
+        const h = hex.replace("#", "");
+        return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
+    }
+
+    // 将颜色与白色按 weight:(1-weight) 混合，返回 rgb() 字符串（用于逐字渐变起始色）
+    mixWithWhite(hex, weight) {
+        const h = hex.replace("#", "");
+        const r = Math.round(parseInt(h.substring(0, 2), 16) * weight + 255 * (1 - weight));
+        const g = Math.round(parseInt(h.substring(2, 4), 16) * weight + 255 * (1 - weight));
+        const b = Math.round(parseInt(h.substring(4, 6), 16) * weight + 255 * (1 - weight));
+        return `rgb(${r}, ${g}, ${b})`;
     }
 
     // 桌面歌词颜色变化：通知主窗口 LyricsPlayer 刷新桌面歌词样式

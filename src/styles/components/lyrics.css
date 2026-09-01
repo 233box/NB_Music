@@ -99,8 +99,8 @@
 .lyric-line.active {
   opacity: 1;
   font-weight: 600;
-  color: var(--theme-2);
-  text-shadow: 0 0 8px rgba(var(--theme-2-rgb), 0.3);
+  color: var(--lyric-highlight, var(--theme-2));
+  text-shadow: 0 0 8px rgba(var(--lyric-highlight-rgb, var(--theme-2-rgb)), 0.3);
 }
 
 .lyric-line.active .lyric-translation {
@@ -118,7 +118,7 @@
 }
 
 .lyric-line.clickable:hover {
-  background: rgba(var(--theme-2-rgb), 0.1);
+  background: rgba(var(--lyric-highlight-rgb, var(--theme-2-rgb)), 0.1);
   opacity: 0.9;
   transform: translateY(-1px);
 }
@@ -148,7 +148,7 @@
 }
 
 .lyric-jump-indicator i {
-  color: var(--theme-2);
+  color: var(--lyric-highlight, var(--theme-2));
   font-size: 18px;
 }
 
@@ -163,8 +163,8 @@
 
 /* 为了更好的可访问性，添加焦点状态样式 */
 .lyric-line.clickable:focus-visible {
-  outline: 2px solid var(--theme-2);
-  background: rgba(var(--theme-2-rgb), 0.15);
+  outline: 2px solid var(--lyric-highlight, var(--theme-2));
+  background: rgba(var(--lyric-highlight-rgb, var(--theme-2-rgb)), 0.15);
 }
 
 /* 初始布局过渡效果 */
@@ -197,7 +197,7 @@
   transform: translateX(-50%);
   width: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--theme-1), var(--theme-2));
+  background: linear-gradient(90deg, var(--lyric-grad-a, var(--theme-1)), var(--lyric-grad-b, var(--theme-2)));
   transition: width 0.8s var(--animation-timing-bounce) 0.2s;
 }
 
@@ -228,7 +228,7 @@
   transform: scale(1.15);
   opacity: 1;
   text-shadow: 0 0 8px var(--rgba-13);
-  background: linear-gradient(90deg, var(--theme-1), var(--theme-2));
+  background: linear-gradient(90deg, var(--lyric-grad-a, var(--theme-1)), var(--lyric-grad-b, var(--theme-2)));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -277,7 +277,7 @@
 }
 
 .desktop-lyrics-toggle.active {
-  color: var(--theme-2);
+  color: var(--lyric-highlight, var(--theme-2));
   opacity: 1;
 }
 
@@ -326,7 +326,7 @@
 }
 
 .desktop-lyrics-toggle.active {
-  color: var(--theme-2);
+  color: var(--lyric-highlight, var(--theme-2));
   opacity: 1;
   background-color: var(--bg80);
 }
