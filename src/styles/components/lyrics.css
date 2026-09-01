@@ -35,6 +35,7 @@
   font-size: 14px;
   line-height: 1.8;
   color: var(--rgba-12);
+  background: var(--mica); /* 半透明背景，保证歌词可读性，透明度随 Mica 透明度调节 */
   width: 50%;
   height: 100%;
   overflow: hidden;

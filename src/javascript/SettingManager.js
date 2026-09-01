@@ -681,9 +681,6 @@ class SettingManager {
                     const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
                     const bgHost = mainMica || document.body;
                     bgHost.appendChild(video);
-
-                    // 视频上盖玻璃蒙层，与封面模式（.mica 半透明蒙住封面）表现一致
-                    this.refreshGlassShade();
                 }
                 break;
             }
@@ -701,24 +698,6 @@ class SettingManager {
             video.pause();
             video.remove();
         });
-        // 视频移除后同步清理玻璃蒙层
-        this.refreshGlassShade();
-    }
-
-    // 玻璃蒙层：视频存在时盖在其上（z 0，DOM 在 video 后），使 Mica 透明度对视频模式同样可见
-    // 封面模式无需蒙层：html 封面背景天然位于 .mica 半透明背景之下
-    refreshGlassShade() {
-        const hasVideo = document.querySelector("body > video, .mica > video");
-        const mainMica = document.querySelector(".content")?.closest(".mica") || document.querySelectorAll(".mica")[1] || document.querySelector(".mica");
-        const host = mainMica || document.body;
-        let shade = host.querySelector(":scope > .mica-glass-shade");
-        if (hasVideo && !shade) {
-            shade = document.createElement("div");
-            shade.className = "mica-glass-shade";
-            host.appendChild(shade); // 在 video 之后插入 → 盖住视频
-        } else if (!hasVideo && shade) {
-            shade.remove();
-        }
     }
 
     // 毛玻璃开关：关闭（默认）时加 no-glass，所有 backdrop-filter 失效

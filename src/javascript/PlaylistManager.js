@@ -781,10 +781,6 @@ class PlaylistManager {
 
                 // 绑定同步事件
                 this.bindVideoEvents(video);
-                // 视频上盖玻璃蒙层，与封面模式表现一致
-                if (this.settingManager.refreshGlassShade) {
-                    this.settingManager.refreshGlassShade();
-                }
             } catch (error) {
                 this.uiManager.showNotification("视频背景设置失败: " + error.message, "error");
                 // 发生错误时回退到封面背景
