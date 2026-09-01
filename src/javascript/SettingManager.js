@@ -200,6 +200,9 @@ class SettingManager {
             // 对于videoQuality，需要转换为数字
             case "videoQuality":
                 return parseInt(value);
+            // 布尔开关："true"/"false" 字符串转为布尔
+            case "glassEffect":
+                return value === "true";
             // 字体
             case "fontFamilyCustom":
             case "fontFamilyFallback":
@@ -728,7 +731,9 @@ class SettingManager {
     // 毛玻璃开关：关闭（默认）时加 no-glass，所有 backdrop-filter 失效
     applyGlassEffect() {
         const root = document.documentElement;
-        if (this.settings.glassEffect) {
+        // 兼容布尔与字符串 "true"/"false"（旧数据可能存了字符串）
+        const enabled = this.settings.glassEffect === true || this.settings.glassEffect === "true";
+        if (enabled) {
             root.classList.remove("no-glass");
         } else {
             root.classList.add("no-glass");
