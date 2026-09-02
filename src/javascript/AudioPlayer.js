@@ -25,8 +25,6 @@ class AudioPlayer {
          * @type {import("./UIManager.js")}
          */
         this.uimanager = null; // 将由UIManager设置
-        // 添加事件系统支持
-        this.eventListeners = {};
         
         this.audio.addEventListener("timeupdate", () => {
             // 增加保存频率：每10秒保存一次进度
@@ -128,8 +126,7 @@ class AudioPlayer {
             }
 
             // 获取当前音量设置
-            const currentVolume = this.settingManager ? 
-                Math.max(0, this.settingManager.getSetting('volume') / 100) : 1;
+            const currentVolume = this.getNormalizedVolume();
 
             // 如果音量为0或禁用了淡入淡出效果，直接设置音量为当前音量并播放
             if (!fadeEnabled || currentVolume === 0) {
@@ -177,8 +174,7 @@ class AudioPlayer {
             }
 
             // 获取当前音量设置
-            const currentVolume = this.settingManager ? 
-                Math.max(0, this.settingManager.getSetting('volume') / 100) : 1;
+            const currentVolume = this.getNormalizedVolume();
 
             // 如果音量为0或禁用了淡入淡出效果，直接暂停
             if (!fadeEnabled || currentVolume === 0) {
@@ -317,12 +313,17 @@ class AudioPlayer {
         this.playlistManager.setPlayingNow(nextIndex);
     }
 
+    // 归一化音量（设置值 0-100 → 0-1）
+    getNormalizedVolume() {
+        return this.settingManager ? Math.max(0, this.settingManager.getSetting("volume") / 100) : 1;
+    }
+
     // 设置 settingManager 的方法
     setSettingManager(settingManager) {
         this.settingManager = settingManager;
         // 当settingManager被设置时，立即更新音量
         if (this.settingManager) {
-            const currentVolume = Math.max(0, this.settingManager.getSetting('volume') / 100);
+            const currentVolume = this.getNormalizedVolume();
             this.audio.volume = currentVolume === 0 ? 0 : currentVolume;
         }
     }
@@ -332,28 +333,6 @@ class AudioPlayer {
         this.uimanager = uiManager;
     }
     
-    // 添加事件监听器
-    addEventListener(event, callback) {
-        if (!this.eventListeners[event]) {
-            this.eventListeners[event] = [];
-        }
-        this.eventListeners[event].push(callback);
-    }
-
-    // 移除事件监听器
-    removeEventListener(event, callback) {
-        if (!this.eventListeners[event]) return;
-        this.eventListeners[event] = this.eventListeners[event].filter(cb => cb !== callback);
-    }
-
-    // 触发事件
-    dispatchEvent(event, data) {
-        if (!this.eventListeners[event]) return;
-        this.eventListeners[event].forEach(callback => {
-            callback(data);
-        });
-    }
-
     // 重置播放状态
     resetPlayState() {
         this.isPlayRequestPending = false;
@@ -362,8 +341,7 @@ class AudioPlayer {
             this.volumeInterval = null;
         }
         // 使用当前音量设置
-        const currentVolume = this.settingManager ? 
-            Math.max(0, this.settingManager.getSetting('volume') / 100) : 1;
+        const currentVolume = this.getNormalizedVolume();
         this.audio.volume = currentVolume;
     }
 }
