@@ -68,6 +68,8 @@ body.interactive:not(.locked) {
   letter-spacing: 0.02em;
   margin: 12px 0;
   color: var(--current-line-color, #7eb8ff);
+  /* 透明窗悬浮在任意内容上，深色描边保证歌词轮廓清晰 */
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.7);
 }
 
 .next-line {
@@ -77,6 +79,7 @@ body.interactive:not(.locked) {
   margin: 10px 0;
   font-weight: 500;
   letter-spacing: 0.01em;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.6);
 }
 
 /* 翻译行：小字 */
@@ -87,6 +90,8 @@ body.interactive:not(.locked) {
   margin: 2px 0 0;
   letter-spacing: 0.01em;
   max-width: 90%;
+  /* 小字号描边细一点，避免笔画糊在一起 */
+  -webkit-text-stroke: 0.7px rgba(0, 0, 0, 0.55);
 }
 
 /* 歌词更新时不加动画：桌面歌词静态两行直接切换 */

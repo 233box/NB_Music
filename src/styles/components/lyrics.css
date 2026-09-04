@@ -1,3 +1,11 @@
+/* 歌词文字描边：歌词叠在封面/背景图上时保证轮廓清晰，颜色随主题反向 */
+:root.dark {
+  --lyric-stroke: rgba(0, 0, 0, 0.55);
+}
+:root.light {
+  --lyric-stroke: rgba(255, 255, 255, 0.6);
+}
+
 /* 手动搜索歌词按钮 */
 .lyric-search-btn {
   position: absolute;
@@ -84,6 +92,7 @@
   word-break: break-word;
   transition: opacity 0.25s ease, transform 0.25s ease;
   will-change: opacity;
+  -webkit-text-stroke: 1px var(--lyric-stroke);
 }
 
 /* 翻译行（小字，跟随歌词行一起高亮/缩放） */
@@ -93,6 +102,7 @@
   opacity: 0.6;
   margin-top: 2px;
   letter-spacing: 0.01em;
+  -webkit-text-stroke: 0.7px var(--lyric-stroke);
 }
 
 /* 当前播放的歌词行（滚动方案：行固定，仅高亮） */
@@ -224,6 +234,8 @@
 .char.active {
   filter: brightness(var(--brightness));
   color: var(--text);
+  /* 渐变填充字不再叠加描边，避免与 background-clip 渲染打架 */
+  -webkit-text-stroke-width: 0;
   /* 用 transform 缩放代替 font-size 放大：不参与布局，换行位置不会因放大而改变 */
   transform: scale(1.15);
   opacity: 1;
