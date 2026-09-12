@@ -642,69 +642,47 @@
               </div>
             </div>
 
-            <!-- 主题色选择器 -->
-            <div class="setting-item">
+            <!-- 主题预设 -->
+            <div class="setting-item theme-center">
               <div class="setting-info">
-                <i class="bi bi-palette-fill"></i>
+                <i class="bi bi-palette2"></i>
                 <div class="words">
-                  <div class="setting-name">主题颜色</div>
-                  <div class="setting-descrition">设置应用的主要颜色</div>
+                  <div class="setting-name">主题预设</div>
+                  <div class="setting-descrition">一键换肤；「经典」跟随深浅模式默认，风格预设为完整色板</div>
                 </div>
               </div>
-              <div class="setting-value color-pickers">
-                <div class="color-picker-group">
-                  <label>主色:</label>
-                  <input type="color" id="primaryColor" class="color-picker" />
-                </div>
-                <div class="color-picker-group">
-                  <label>次色:</label>
-                  <input type="color" id="secondaryColor" class="color-picker" />
-                </div>
-                <button id="resetThemeColors" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
+              <div class="setting-value">
+                <div class="theme-preset-row" id="themePresetRow"></div>
               </div>
             </div>
 
-            <!-- 界面基础色 -->
+            <!-- 自定义色板 -->
             <div class="setting-item">
               <div class="setting-info">
-                <i class="bi bi-brush-fill"></i>
+                <i class="bi bi-palette"></i>
                 <div class="words">
-                  <div class="setting-name">界面颜色</div>
-                  <div class="setting-descrition">自定义背景、文字与边框颜色，留空跟随主题</div>
+                  <div class="setting-name">自定义色板</div>
+                  <div class="setting-descrition">逐色微调即时生效；面板/次文字留空时分别跟随背景与文字</div>
                 </div>
               </div>
-              <div class="setting-value color-pickers">
-                <div class="color-picker-group">
-                  <label>背景:</label>
-                  <input type="color" id="customBgColor" class="color-picker" />
-                </div>
-                <div class="color-picker-group">
-                  <label>文字:</label>
-                  <input type="color" id="customTextColor" class="color-picker" />
-                </div>
-                <div class="color-picker-group">
-                  <label>边框:</label>
-                  <input type="color" id="customBorderColor" class="color-picker" />
-                </div>
-                <button id="resetCustomColors" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
-              </div>
-            </div>
+              <div class="setting-value">
+                <div class="palette-grid" id="paletteGrid">
+                  <label class="palette-cell"><span class="palette-name">主色</span><input type="color" id="paletteAccent" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">次色</span><input type="color" id="paletteSecondary" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">背景</span><input type="color" id="paletteBg" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">文字</span><input type="color" id="paletteText" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">边框</span><input type="color" id="paletteBorder" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">面板</span><input type="color" id="palettePanel" class="color-picker" /></label>
 
-            <!-- 歌词颜色 -->
-            <div class="setting-item">
-              <div class="setting-info">
-                <i class="bi bi-music-note-beamed"></i>
-                <div class="words">
-                  <div class="setting-name">歌词颜色</div>
-                  <div class="setting-descrition">设置主界面歌词高亮行与逐字动画颜色，默认跟随次色</div>
+                  <label class="palette-cell"><span class="palette-name">次文字</span><input type="color" id="paletteMuted" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">危险</span><input type="color" id="paletteDanger" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">成功</span><input type="color" id="paletteSuccess" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">警告</span><input type="color" id="paletteWarning" class="color-picker" /></label>
+                  <label class="palette-cell"><span class="palette-name">歌词高亮</span><input type="color" id="paletteLyric" class="color-picker" /></label>
                 </div>
-              </div>
-              <div class="setting-value color-pickers">
-                <div class="color-picker-group">
-                  <label>高亮:</label>
-                  <input type="color" id="lyricHighlightColor" class="color-picker" />
+                <div class="palette-actions">
+                  <button id="resetThemePalette" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置为当前主题默认</button>
                 </div>
-                <button id="resetLyricColor" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
               </div>
             </div>
 
@@ -727,6 +705,32 @@
                   <input type="color" id="desktopLyricsTranslationColor" class="color-picker" />
                 </div>
                 <button id="resetDesktopLyricsColors" class="reset-btn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
+              </div>
+            </div>
+
+            <!-- 桌面歌词描边 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <i class="bi bi-bounding-box-circles"></i>
+                <div class="words">
+                  <div class="setting-name">桌面歌词描边</div>
+                  <div class="setting-descrition">歌词文字外轮廓的粗细与颜色，0 为关闭</div>
+                </div>
+              </div>
+              <div class="setting-value">
+                <div class="slider-container">
+                  <input type="range" id="desktopLyricsOutlineSize" min="0" max="3" step="0.5" class="slider" />
+                  <span id="desktopLyricsOutlineSizeValue">1px</span>
+                  <button id="desktopLyricsOutlineReset" class="reset-btn" title="重置为默认值">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </div>
+                <div class="color-pickers" style="margin-top:10px;">
+                  <div class="color-picker-group">
+                    <label>颜色:</label>
+                    <input type="color" id="desktopLyricsOutlineColor" class="color-picker" />
+                  </div>
+                </div>
               </div>
             </div>
 

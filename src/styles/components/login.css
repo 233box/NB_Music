@@ -21,12 +21,13 @@
 
 .switch-method {
     font-weight: bold;
-    transition: color 0.3s ease;
+    transition: color 0.3s ease, filter 0.3s ease;
     text-decoration: none;
-    color: #3e88f6;
+    color: var(--theme-2, #3b91d8);
     font-size: 14px;
 }
 
 .switch-method:hover {
-    color: #39a9ff;
+    color: var(--theme-2, #3b91d8);
+    filter: brightness(1.25);
 }

@@ -241,16 +241,18 @@ class LyricsPlayer {
         const lines = lyricsString.split("\n");
         const parsedData = [];
 
-        // 检查是否为传统时间戳格式
-        const isTraditionalFormat = lines.some((line) => line.match(/^\[\d{2}:\d{2}\.\d{2,3}\]/));
+        // 检查是否为传统时间戳格式（网易云部分歌词用冒号分隔 [mm:ss:xx]，标准 LRC 用点 [mm:ss.xx]，两种都接受）
+        const isTraditionalFormat = lines.some((line) => line.match(/^\[\d{2}:\d{2}[:.]\d{2,3}\]/));
 
         if (isTraditionalFormat) {
             lines.forEach((line) => {
                 if (line.trim() === "") return;
-                const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
+                const match = line.match(/\[(\d{2}):(\d{2})[:.](\d{2,3})\](.*)/);
                 if (match) {
                     const [, mm, ss, ms, text] = match;
-                    const startTime = (parseInt(mm) * 60 + parseInt(ss)) * 1000 + parseInt(ms);
+                    // 2 位为百分秒（0.01s），3 位为毫秒
+                    const frac = parseInt(ms) * (ms.length === 2 ? 10 : 1);
+                    const startTime = (parseInt(mm) * 60 + parseInt(ss)) * 1000 + frac;
                     parsedData.push({
                         type: "lyric",
                         lineStart: startTime,
@@ -327,10 +329,11 @@ class LyricsPlayer {
         const transMap = new Map(); // 时间戳(ms) -> 翻译文本
         translationString.split("\n").forEach((line) => {
             if (!line.trim()) return;
-            // 传统格式 [mm:ss.xx]文本
-            const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
+            // 传统格式 [mm:ss.xx]文本（兼容冒号分隔）
+            const m = line.match(/\[(\d{2}):(\d{2})[:.](\d{2,3})\](.*)/);
             if (m) {
-                const t = (parseInt(m[1]) * 60 + parseInt(m[2])) * 1000 + parseInt(m[3]);
+                const frac = parseInt(m[3]) * (m[3].length === 2 ? 10 : 1);
+                const t = (parseInt(m[1]) * 60 + parseInt(m[2])) * 1000 + frac;
                 const text = m[4].trim();
                 if (text) transMap.set(t, text);
                 return;
@@ -370,12 +373,14 @@ class LyricsPlayer {
             const charSpan = document.createElement("span");
             charSpan.className = "char";
             charSpan.textContent = lyricData.chars[0].text;
+            charSpan.dataset.text = lyricData.chars[0].text;
             lineDiv.appendChild(charSpan);
         } else {
             lyricData.chars.forEach((char) => {
                 const charSpan = document.createElement("span");
                 charSpan.className = "char";
                 charSpan.textContent = char.text;
+                charSpan.dataset.text = char.text;
                 lineDiv.appendChild(charSpan);
             });
         }
@@ -384,6 +389,7 @@ class LyricsPlayer {
             const transDiv = document.createElement("div");
             transDiv.className = "lyric-translation";
             transDiv.textContent = lyricData.translation;
+            transDiv.dataset.text = lyricData.translation;
             lineDiv.appendChild(transDiv);
         }
         return lineDiv;
@@ -904,6 +910,10 @@ class LyricsPlayer {
         const desktopLyricsColor = this.settingManager.getSetting("desktopLyricsColor") || "#7eb8ff";
         const desktopLyricsTranslationColor = this.settingManager.getSetting("desktopLyricsTranslationColor") || "#aab2c0";
 
+        // 桌面歌词外描边（粗细 0=关 / 颜色）
+        const outlineSize = parseFloat(this.settingManager.getSetting("desktopLyricsOutlineSize")) || 0;
+        const outlineColor = this.settingManager.getSetting("desktopLyricsOutlineColor") || "#000000";
+
         // 发送样式到桌面歌词窗口
         this.ipcRenderer.send("update-lyrics-style", {
             currentLineSize: parseInt(fontSize),
@@ -913,7 +923,9 @@ class LyricsPlayer {
             backgroundColor: backgroundColor,
             fontFamily: fontFamily,
             desktopLyricsColor: desktopLyricsColor,
-            desktopLyricsTranslationColor: desktopLyricsTranslationColor
+            desktopLyricsTranslationColor: desktopLyricsTranslationColor,
+            outlineSize: outlineSize,
+            outlineColor: outlineColor
         });
     }
 

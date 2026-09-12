@@ -154,7 +154,7 @@
 }
 
 .song .controls .delete i:hover {
-  color: #ff3b30;
+  color: var(--error, #ff3b30);
 }
 
 /* 播放列表中的歌曲动画 */

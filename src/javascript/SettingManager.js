@@ -7,6 +7,95 @@ class SettingManager {
     static DEFAULT_FONT_FAMILY_CUSTOM = "HarmonyOS_Sans";
     static DEFAULT_FONT_FAMILY_FALLBACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell";
 
+    // 深浅模式下的主题默认色（供色板网格显示与重置回退）
+    static THEME_DEFAULTS = {
+        dark: {
+            primaryColor: "#ad6eca",
+            secondaryColor: "#3b91d8",
+            customBgColor: "#1c1c1c",
+            customTextColor: "#ffffff",
+            customBorderColor: "#ffffff",
+            customPanelColor: "#1c1c1c",
+            customMutedColor: "#ffffff",
+            customDangerColor: "#ff3b30",
+            customSuccessColor: "#4caf50",
+            customWarningColor: "#ff9500",
+            lyricHighlightColor: "#3b91d8"
+        },
+        light: {
+            primaryColor: "#ad6eca",
+            secondaryColor: "#3b91d8",
+            customBgColor: "#ffffff",
+            customTextColor: "#222222",
+            customBorderColor: "#000000",
+            customPanelColor: "#ffffff",
+            customMutedColor: "#000000",
+            customDangerColor: "#dc3545",
+            customSuccessColor: "#198754",
+            customWarningColor: "#ffc107",
+            lyricHighlightColor: "#3b91d8"
+        }
+    };
+
+    // 风格化主题预设（colors = 一套完整色板，classic 不带 colors 表示跟随深浅模式默认）
+    static THEME_PRESETS = [
+        { id: "classic", name: "经典" },
+        {
+            id: "shibuyaNight",
+            name: "涩谷霓虹",
+            colors: {
+                accent: "#ff2f98", secondary: "#18d5f4",
+                bg: "#070411", panel: "#170f26", text: "#f0e5ff", muted: "#c7b5e4", border: "#43307a",
+                danger: "#ff5c7a", success: "#5ee6c8", warning: "#ffc15e"
+            }
+        },
+        {
+            id: "oceanStudio",
+            name: "海洋录音室",
+            colors: {
+                accent: "#68b4d4", secondary: "#9aa7e8",
+                bg: "#0f151b", panel: "#1e2a34", text: "#d4e5ef", muted: "#a9bfce", border: "#33485a",
+                danger: "#e05d6f", success: "#63c7a9", warning: "#e8b45a"
+            }
+        },
+        {
+            id: "rosewoodVinyl",
+            name: "玫瑰黑胶",
+            colors: {
+                accent: "#d4827b", secondary: "#d2a45c",
+                bg: "#140f10", panel: "#2a1d1d", text: "#ebd1cb", muted: "#c7aaa3", border: "#4a3232",
+                danger: "#e0605a", success: "#9cc48a", warning: "#d9a45c"
+            }
+        },
+        {
+            id: "amberNoir",
+            name: "琥珀黑胶",
+            colors: {
+                accent: "#d4a64c", secondary: "#b88763",
+                bg: "#11100e", panel: "#26221b", text: "#ead9bd", muted: "#c3ad8d", border: "#4a4034",
+                danger: "#e2574c", success: "#7fb069", warning: "#e0a458"
+            }
+        },
+        {
+            id: "sakuraMilk",
+            name: "樱花奶昔",
+            colors: {
+                accent: "#cf5d7d", secondary: "#5f9fad",
+                bg: "#fff6f9", panel: "#fffdfe", text: "#55333f", muted: "#765b66", border: "#e8cdd8",
+                danger: "#d94f66", success: "#5f9f6e", warning: "#c98f3a"
+            }
+        },
+        {
+            id: "mintCandy",
+            name: "薄荷糖果",
+            colors: {
+                accent: "#3f9274", secondary: "#b95168",
+                bg: "#f6fff8", panel: "#fdfffa", text: "#33493e", muted: "#556f63", border: "#d2e6d8",
+                danger: "#d9505f", success: "#3f9274", warning: "#c08a2e"
+            }
+        }
+    ];
+
     static DEFAULT_VALUES = {
         theme: "dark",
         hideSidebar: false,
@@ -29,9 +118,17 @@ class SettingManager {
         desktopLyricsEnabled: false,
         desktopLyricsColor: "#7eb8ff", // 桌面歌词当前行颜色
         desktopLyricsTranslationColor: "#aab2c0", // 桌面歌词翻译行颜色
+        desktopLyricsOutlineSize: 1, // 桌面歌词外描边粗细（px，0=关闭）
+        desktopLyricsOutlineColor: "#000000", // 桌面歌词外描边颜色
         customBgColor: null, // 界面背景色（null = 跟随主题）
         customTextColor: null, // 界面文字色（null = 跟随主题）
         customBorderColor: null, // 界面边框色（null = 跟随主题）
+        customDangerColor: null, // 危险/错误色（null = 跟随主题）
+        customSuccessColor: null, // 成功色（null = 跟随主题）
+        customWarningColor: null, // 警告色（null = 跟随主题）
+        customPanelColor: null, // 面板/浮层底色（null = 跟随背景）
+        customMutedColor: null, // 次文字色（null = 跟随文字）
+        themePreset: "classic", // 当前主题预设 id（classic = 跟随深浅模式默认）
         lyricHighlightColor: null, // 主界面歌词高亮色（null = 跟随次色）
         fadeEnabled: true, // 音频淡入淡出效果
 
@@ -207,109 +304,91 @@ class SettingManager {
     }
 
     setupCustomThemeControls() {
-        // 初始化颜色选择器的值
-        const primaryColorPicker = document.getElementById("primaryColor");
-        const secondaryColorPicker = document.getElementById("secondaryColor");
-
-        if (primaryColorPicker) {
-            primaryColorPicker.value = this.settings.primaryColor;
-            primaryColorPicker.addEventListener("change", (e) => {
-                this.setSetting("primaryColor", e.target.value);
-                this.applyThemeColors();
-            });
-        }
-
-        if (secondaryColorPicker) {
-            secondaryColorPicker.value = this.settings.secondaryColor;
-            secondaryColorPicker.addEventListener("change", (e) => {
-                this.setSetting("secondaryColor", e.target.value);
-                this.applyThemeColors();
-            });
-        }
-
-        // 重置颜色按钮
-        const resetThemeColorsBtn = document.getElementById("resetThemeColors");
-        if (resetThemeColorsBtn) {
-            resetThemeColorsBtn.addEventListener("click", () => {
-                // 重置为默认值
-                this.setSetting("primaryColor", SettingManager.DEFAULT_PRIMARY_COLOR);
-                this.setSetting("secondaryColor", SettingManager.DEFAULT_SECONDARY_COLOR);
-
-                // 更新UI
-                if (primaryColorPicker) primaryColorPicker.value = SettingManager.DEFAULT_PRIMARY_COLOR;
-                if (secondaryColorPicker) secondaryColorPicker.value = SettingManager.DEFAULT_SECONDARY_COLOR;
-
-                // 应用更改
-                this.applyThemeColors();
-
-                // 显示通知
-                if (this.uiManager) {
-                    this.uiManager.showNotification("主题颜色已重置", "success");
-                }
-            });
-        }
-        // 初始应用主题色
-        this.applyThemeColors();
-
-        // 界面基础色（背景/文字/边框）：null = 跟随当前主题
-        const customBgPicker = document.getElementById("customBgColor");
-        const customTextPicker = document.getElementById("customTextColor");
-        const customBorderPicker = document.getElementById("customBorderColor");
+        // ===== 主题中心：预设卡片 + 自定义色板网格 =====
         const isDark = document.documentElement.className !== "light";
-        const bgDef = isDark ? "#1c1c1c" : "#ffffff";
-        const textDef = isDark ? "#ffffff" : "#222222";
-        const borderDef = isDark ? "#ffffff" : "#000000";
+        const defs = SettingManager.THEME_DEFAULTS[isDark ? "dark" : "light"];
+        const paletteMap = [
+            { pickerId: "paletteAccent", key: "primaryColor", apply: () => this.applyThemeColors() },
+            { pickerId: "paletteSecondary", key: "secondaryColor", apply: () => this.applyThemeColors() },
+            { pickerId: "paletteBg", key: "customBgColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteText", key: "customTextColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteBorder", key: "customBorderColor", apply: () => this.applyCustomColors() },
+            { pickerId: "palettePanel", key: "customPanelColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteMuted", key: "customMutedColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteDanger", key: "customDangerColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteSuccess", key: "customSuccessColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteWarning", key: "customWarningColor", apply: () => this.applyCustomColors() },
+            { pickerId: "paletteLyric", key: "lyricHighlightColor", apply: () => this.applyCustomColors() }
+        ];
 
-        const bindCustomPicker = (picker, key, def) => {
+        const refreshPickers = () => {
+            paletteMap.forEach(({ pickerId, key }) => {
+                const picker = document.getElementById(pickerId);
+                if (picker) picker.value = this.settings[key] || defs[key];
+            });
+            this.refreshPresetActive();
+        };
+        // 供模式切换等外部刷新（重建 defs 指向新模式默认）
+        this.refreshPalettePickers = () => {
+            const isDarkNow = document.documentElement.className !== "light";
+            const newDefs = SettingManager.THEME_DEFAULTS[isDarkNow ? "dark" : "light"];
+            paletteMap.forEach(({ pickerId, key }) => {
+                const picker = document.getElementById(pickerId);
+                if (picker) picker.value = this.settings[key] || newDefs[key];
+            });
+            this.refreshPresetActive();
+        };
+
+        paletteMap.forEach(({ pickerId, key, apply }) => {
+            const picker = document.getElementById(pickerId);
             if (!picker) return;
-            picker.value = this.settings[key] || def;
+            picker.value = this.settings[key] || defs[key];
             picker.addEventListener("change", (e) => {
                 this.setSetting(key, e.target.value);
-                this.applyCustomColors();
+                apply();
+                this.notifyDesktopLyricsStyleRefresh();
             });
-        };
-        bindCustomPicker(customBgPicker, "customBgColor", bgDef);
-        bindCustomPicker(customTextPicker, "customTextColor", textDef);
-        bindCustomPicker(customBorderPicker, "customBorderColor", borderDef);
+        });
 
-        const resetCustomColorsBtn = document.getElementById("resetCustomColors");
-        if (resetCustomColorsBtn) {
-            resetCustomColorsBtn.addEventListener("click", () => {
-                this.setSetting("customBgColor", null);
-                this.setSetting("customTextColor", null);
-                this.setSetting("customBorderColor", null);
-                if (customBgPicker) customBgPicker.value = bgDef;
-                if (customTextPicker) customTextPicker.value = textDef;
-                if (customBorderPicker) customBorderPicker.value = borderDef;
-                this.applyCustomColors();
+        // 渲染预设卡片（单源：THEME_PRESETS，样式经 --pc-a/--pc-b/--pc-bg 预览）
+        const presetRowEl = document.getElementById("themePresetRow");
+        if (presetRowEl) {
+            presetRowEl.innerHTML = SettingManager.THEME_PRESETS.map((p) => {
+                const c = p.colors || { accent: "#ad6eca", secondary: "#3b91d8", bg: "#1c1c1c" };
+                return `<button type="button" class="theme-preset-card" data-preset="${p.id}" style="--pc-a:${c.accent};--pc-b:${c.secondary};--pc-bg:${c.bg}">
+                    <span class="theme-preset-swatch"></span><span class="theme-preset-label">${p.name}</span></button>`;
+            }).join("");
+        }
+
+        // 预设卡片点击换肤
+        const presetRow = document.getElementById("themePresetRow");
+        if (presetRow) {
+            presetRow.addEventListener("click", (e) => {
+                const card = e.target.closest("[data-preset]");
+                if (!card) return;
+                this.applyThemePreset(card.dataset.preset);
+                refreshPickers();
                 if (this.uiManager) {
-                    this.uiManager.showNotification("界面颜色已重置", "success");
+                    const preset = SettingManager.THEME_PRESETS.find((p) => p.id === card.dataset.preset);
+                    if (preset) this.uiManager.showNotification(`已应用主题：${preset.name}`, "success");
                 }
             });
         }
 
-        // 歌词高亮色（主界面）：null = 跟随次色
-        const lyricColorPicker = document.getElementById("lyricHighlightColor");
-        if (lyricColorPicker) {
-            lyricColorPicker.value = this.settings.lyricHighlightColor || this.settings.secondaryColor || "#3b91d8";
-            lyricColorPicker.addEventListener("change", (e) => {
-                this.setSetting("lyricHighlightColor", e.target.value);
-                this.applyCustomColors();
+        // 重置全部颜色（回跟随主题默认）
+        const resetThemePaletteBtn = document.getElementById("resetThemePalette");
+        if (resetThemePaletteBtn) {
+            resetThemePaletteBtn.addEventListener("click", () => {
+                this.applyThemePreset("classic");
+                refreshPickers();
+                if (this.uiManager) this.uiManager.showNotification("配色已重置为当前主题默认", "success");
             });
         }
 
-        const resetLyricColorBtn = document.getElementById("resetLyricColor");
-        if (resetLyricColorBtn) {
-            resetLyricColorBtn.addEventListener("click", () => {
-                this.setSetting("lyricHighlightColor", null);
-                if (lyricColorPicker) lyricColorPicker.value = this.settings.secondaryColor || "#3b91d8";
-                this.applyCustomColors();
-                if (this.uiManager) {
-                    this.uiManager.showNotification("歌词颜色已重置", "success");
-                }
-            });
-        }
+        // 初始应用
+        this.applyThemeColors();
         this.applyCustomColors();
+        this.refreshPresetActive();
         this.applyGlassEffect();
 
         // 桌面歌词颜色选择器
@@ -341,6 +420,45 @@ class SettingManager {
                 this.setSetting("desktopLyricsTranslationColor", defTrans);
                 if (desktopLyricsColorPicker) desktopLyricsColorPicker.value = defLine;
                 if (desktopLyricsTransColorPicker) desktopLyricsTransColorPicker.value = defTrans;
+                this.notifyDesktopLyricsStyleRefresh();
+            });
+        }
+
+        // 桌面歌词外描边：粗细（0=关）+ 颜色
+        const outlineSizeSlider = document.getElementById("desktopLyricsOutlineSize");
+        const outlineSizeValue = document.getElementById("desktopLyricsOutlineSizeValue");
+        const outlineColorPicker = document.getElementById("desktopLyricsOutlineColor");
+        const resetOutlineBtn = document.getElementById("desktopLyricsOutlineReset");
+
+        if (outlineSizeSlider) {
+            const renderSize = (v) => {
+                if (outlineSizeValue) outlineSizeValue.textContent = v > 0 ? `${v}px` : "关";
+            };
+            outlineSizeSlider.value = this.settings.desktopLyricsOutlineSize;
+            renderSize(this.settings.desktopLyricsOutlineSize);
+            outlineSizeSlider.addEventListener("input", (e) => {
+                const v = parseFloat(e.target.value);
+                this.setSetting("desktopLyricsOutlineSize", v);
+                renderSize(v);
+                this.notifyDesktopLyricsStyleRefresh();
+            });
+        }
+
+        if (outlineColorPicker) {
+            outlineColorPicker.value = this.settings.desktopLyricsOutlineColor;
+            outlineColorPicker.addEventListener("change", (e) => {
+                this.setSetting("desktopLyricsOutlineColor", e.target.value);
+                this.notifyDesktopLyricsStyleRefresh();
+            });
+        }
+
+        if (resetOutlineBtn) {
+            resetOutlineBtn.addEventListener("click", () => {
+                this.setSetting("desktopLyricsOutlineSize", 1);
+                this.setSetting("desktopLyricsOutlineColor", "#000000");
+                if (outlineSizeSlider) outlineSizeSlider.value = 1;
+                if (outlineSizeValue) outlineSizeValue.textContent = "1px";
+                if (outlineColorPicker) outlineColorPicker.value = "#000000";
                 this.notifyDesktopLyricsStyleRefresh();
             });
         }
@@ -410,6 +528,54 @@ class SettingManager {
         const root = document.documentElement;
         root.style.setProperty("--primary-color", this.settings.primaryColor);
         root.style.setProperty("--secondary-color", this.settings.secondaryColor);
+        // rgb 通道：供 rgba(var(--theme-x-rgb), alpha) 光晕/层次派生
+        root.style.setProperty("--theme-1-rgb", this.hexToRgbString(this.settings.primaryColor));
+        root.style.setProperty("--theme-2-rgb", this.hexToRgbString(this.settings.secondaryColor));
+    }
+
+    // 应用主题预设：classic = 清空所有覆写回主题默认；其它 = 整板写入
+    applyThemePreset(id) {
+        const preset = SettingManager.THEME_PRESETS.find((p) => p.id === id) || null;
+        this.setSetting("themePreset", preset ? id : "classic");
+
+        const paletteKeys = [
+            ["primaryColor", "accent"],
+            ["secondaryColor", "secondary"],
+            ["customBgColor", "bg"],
+            ["customTextColor", "text"],
+            ["customBorderColor", "border"],
+            ["customPanelColor", "panel"],
+            ["customMutedColor", "muted"],
+            ["customDangerColor", "danger"],
+            ["customSuccessColor", "success"],
+            ["customWarningColor", "warning"]
+        ];
+
+        if (preset && preset.colors) {
+            paletteKeys.forEach(([key, colorKey]) => {
+                const v = preset.colors[colorKey];
+                if (v) this.setSetting(key, v);
+            });
+        } else {
+            // 经典：主次色回默认常量，其余清空覆写跟随主题模式
+            this.setSetting("primaryColor", SettingManager.DEFAULT_PRIMARY_COLOR);
+            this.setSetting("secondaryColor", SettingManager.DEFAULT_SECONDARY_COLOR);
+            paletteKeys.slice(2).forEach(([key]) => this.setSetting(key, null));
+        }
+
+        this.applyThemeColors();
+        this.applyCustomColors();
+        this.refreshPresetActive();
+        this.notifyDesktopLyricsStyleRefresh();
+    }
+
+    // 预设卡激活态同步（settings.themePreset 与预设卡片高亮对应）
+    refreshPresetActive() {
+        const row = document.getElementById("themePresetRow");
+        if (!row) return;
+        row.querySelectorAll("[data-preset]").forEach((card) => {
+            card.classList.toggle("active", card.dataset.preset === this.settings.themePreset);
+        });
     }
 
     // 应用自定义基础色与歌词色（null 时移除覆盖，回退主题默认）
@@ -438,6 +604,38 @@ class SettingManager {
         } else {
             root.style.removeProperty("--custom-border");
         }
+
+        // 面板/次文字：通道化（null 时回退主题默认，默认分别跟随背景与文字）
+        const panel = this.settings.customPanelColor;
+        if (panel) {
+            root.style.setProperty("--custom-panel-rgb", this.hexToRgbString(panel));
+        } else {
+            root.style.removeProperty("--custom-panel-rgb");
+        }
+
+        const muted = this.settings.customMutedColor;
+        if (muted) {
+            root.style.setProperty("--custom-muted-rgb", this.hexToRgbString(muted));
+        } else {
+            root.style.removeProperty("--custom-muted-rgb");
+        }
+
+        // 状态色（危险/成功/警告）：覆写 --error/--success/--warning 及其 rgb 通道
+        const statusPairs = [
+            { key: "customDangerColor", cssVar: "--error", rgbVar: "--error-rgb" },
+            { key: "customSuccessColor", cssVar: "--success", rgbVar: "--success-rgb" },
+            { key: "customWarningColor", cssVar: "--warning", rgbVar: "--warning-rgb" }
+        ];
+        statusPairs.forEach(({ key, cssVar, rgbVar }) => {
+            const value = this.settings[key];
+            if (value) {
+                root.style.setProperty(cssVar, value);
+                root.style.setProperty(rgbVar, this.hexToRgbString(value));
+            } else {
+                root.style.removeProperty(cssVar);
+                root.style.removeProperty(rgbVar);
+            }
+        });
 
         const lyric = this.settings.lyricHighlightColor;
         if (lyric) {
@@ -571,6 +769,9 @@ class SettingManager {
         } else {
             root.className = theme;
         }
+        // 模式切换：刷新色板网格默认值显示 + 桌面歌词换肤
+        if (this.refreshPalettePickers) this.refreshPalettePickers();
+        this.notifyDesktopLyricsStyleRefresh();
     }
 
     applyBackground(type) {

@@ -9,8 +9,8 @@
 <body>
   <div id="lyrics-container">
     <div class="lyrics-content">
-      <div class="current-line">NB Music 桌面歌词</div>
-      <div class="translation-line"></div>
+      <div class="current-line" data-text="NB Music 桌面歌词">NB Music 桌面歌词</div>
+      <div class="translation-line" data-text=""></div>
     </div>
   </div>
 
@@ -66,14 +66,23 @@
       const newCur = currentLine || 'NB Music 桌面歌词';
       const newTrans = (currentTranslation || '').trim();
 
-      // 仅当歌词文本真的变化时才更新
+      // 仅当歌词文本真的变化时才更新（data-text 同步给描边副本层）
       if (curLineEl.textContent !== newCur) {
         curLineEl.textContent = newCur;
+        curLineEl.dataset.text = newCur;
       }
       if (transLineEl.textContent !== newTrans) {
         transLineEl.textContent = newTrans;
+        transLineEl.dataset.text = newTrans;
       }
     });
+
+    // "#rrggbb" → "rgba(r, g, b, a)"（供描边变量使用）
+    function hexToRgba(hex, alpha) {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (!m) return null;
+      return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
+    }
 
     // 监听样式更新
     ipcRenderer.on('update-lyrics-style', (event, style) => {
@@ -103,6 +112,14 @@
       }
       if (style.desktopLyricsTranslationColor) {
         root.style.setProperty('--translation-line-color', style.desktopLyricsTranslationColor);
+      }
+      // 外描边：粗细（0 为关闭，视觉宽度自动翻倍用于副本 stroke）+ 颜色
+      if (style.outlineSize !== undefined && style.outlineSize !== null) {
+        root.style.setProperty('--lyric-outline-size', `${style.outlineSize}px`);
+      }
+      if (style.outlineColor) {
+        const color = hexToRgba(style.outlineColor, 0.9) || style.outlineColor;
+        root.style.setProperty('--lyric-outline-color', color);
       }
     });
 

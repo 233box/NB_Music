@@ -161,13 +161,13 @@ li:hover .playlist-buttons {
 /* 删除按钮特殊样式 */
 .delete-playlist,
 .delete-song {
-  color: #ff3b30;
-  border-color: rgba(255, 59, 48, 0.3);
+  color: var(--error, #ff3b30);
+  border-color: rgba(var(--error-rgb, 255, 59, 48), 0.3);
 }
 
 .delete-playlist:hover,
 .delete-song:hover {
-  background: rgba(255, 59, 48, 0.1);
+  background: rgba(var(--error-rgb, 255, 59, 48), 0.1);
 }
 
 /* 播放列表和歌曲列表项 */

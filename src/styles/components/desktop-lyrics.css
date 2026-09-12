@@ -10,6 +10,9 @@
   --bg-glass-dark: rgba(0, 0, 0, 0.4);
   --bg-glass-darker: rgba(0, 0, 0, 0.6);
   --border-light: rgba(255, 255, 255, 0.1);
+  /* 歌词文字外描边（双层实现）：size 为视觉外扩宽度，color 含透明度 */
+  --lyric-outline-size: 1px;
+  --lyric-outline-color: rgba(0, 0, 0, 0.9);
 }
 
 /* 基础样式 */
@@ -61,6 +64,27 @@ body.interactive:not(.locked) {
   margin-bottom: 15px;
 }
 
+/* 歌词行需要相对定位以承载描边副本 */
+.current-line,
+.next-line,
+.translation-line {
+  position: relative;
+}
+
+/* 纯向外描边：底层副本只画 stroke 不填充，本体文字盖住内半，仅外扩部分可见 */
+/* 行自身 z-index:0 建立 stacking context，副本 z-index:-1 锁在行内不被父背景压掉 */
+.current-line::after,
+.next-line::after,
+.translation-line::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: transparent;
+  pointer-events: none;
+  -webkit-text-stroke: calc(var(--lyric-outline-size, 1px) * 2) var(--lyric-outline-color, rgba(0, 0, 0, 0.9));
+}
+
 .current-line {
   font-weight: 700;
   font-size: var(--current-line-size, 28px);
@@ -68,8 +92,6 @@ body.interactive:not(.locked) {
   letter-spacing: 0.02em;
   margin: 12px 0;
   color: var(--current-line-color, #7eb8ff);
-  /* 透明窗悬浮在任意内容上，深色描边保证歌词轮廓清晰 */
-  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.7);
 }
 
 .next-line {
@@ -79,7 +101,6 @@ body.interactive:not(.locked) {
   margin: 10px 0;
   font-weight: 500;
   letter-spacing: 0.01em;
-  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.6);
 }
 
 /* 翻译行：小字 */
@@ -90,8 +111,6 @@ body.interactive:not(.locked) {
   margin: 2px 0 0;
   letter-spacing: 0.01em;
   max-width: 90%;
-  /* 小字号描边细一点，避免笔画糊在一起 */
-  -webkit-text-stroke: 0.7px rgba(0, 0, 0, 0.55);
 }
 
 /* 歌词更新时不加动画：桌面歌词静态两行直接切换 */

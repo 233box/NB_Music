@@ -750,3 +750,91 @@ nav a:focus-visible {
     font-size: 10px;
   }
 }
+/* ===== 主题中心：预设卡片 + 自定义色板网格 ===== */
+.theme-preset-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.theme-preset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--border-1);
+  border-radius: 10px;
+  background: var(--bg50);
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.theme-preset-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--theme-2);
+}
+
+.theme-preset-card.active {
+  border-color: var(--theme-2);
+  box-shadow: 0 0 0 1px var(--theme-2), 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.theme-preset-swatch {
+  height: 36px;
+  border-radius: 6px;
+  background:
+    linear-gradient(120deg, var(--pc-a), var(--pc-b));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.theme-preset-label {
+  text-align: center;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.palette-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 4px;
+  border: 1px solid var(--border-1);
+  border-radius: 8px;
+  background: var(--bg50);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.palette-cell:hover {
+  border-color: var(--theme-2);
+}
+
+.palette-name {
+  font-size: 11px;
+  opacity: 0.72;
+  line-height: 1;
+}
+
+.palette-cell .color-picker {
+  width: 34px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.palette-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}

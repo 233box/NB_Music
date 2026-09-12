@@ -30,7 +30,8 @@
 }
 
 .bar-info {
-  min-width: 0;
+  /* 锁死宽度：歌名长短不再改变左区占宽，否则中间播放控制区（播放按钮/进度条）会整体平移 */
+  width: 200px;
   max-width: 200px;
   flex-shrink: 0;
 }
@@ -92,7 +93,7 @@
   font-size: 12px;
   color: var(--rgba-6);
   font-variant-numeric: tabular-nums;
-  min-width: 36px;
+  width: 110px;
   text-align: right;
 }
 

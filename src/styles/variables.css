@@ -48,7 +48,7 @@
   --color-3: #444444;
   --rgba-4: rgba(28, 28, 28, 0.5);
   --rgba-5: rgba(0, 0, 0, 0.3);
-  --rgba-6: rgba(var(--custom-text-rgb, 255, 255, 255), 0.7);
+  --rgba-6: rgba(var(--custom-muted-rgb, 255, 255, 255), 0.7);
   --rgba-7: rgba(0, 0, 0, 1);
   --rgba-8: rgba(0, 0, 0, 0);
   --rgba-9: rgba(255, 255, 255, 0.3);
@@ -59,7 +59,12 @@
   --color-14: #000;
   --rgba-15: rgba(30, 215, 96, 0.2);
   --rgba-16: rgba(255, 255, 255, 0.05);
-  --mica: rgba(var(--custom-bg-rgb, 18, 18, 18), var(--mica-opacity));
+  --mica: rgba(var(--custom-panel-rgb, 18, 18, 18), var(--mica-opacity));
+  /* 语义面板层：浮层/弹窗/抽屉底色（可单独覆写 --custom-panel-rgb） */
+  --color-panel: rgba(var(--custom-panel-rgb, 28, 28, 28), 0.72);
+  --color-panel-strong: rgba(var(--custom-panel-rgb, 28, 28, 28), 0.92);
+  /* 语义次文字层（歌手/时间/描述等，可单独覆写 --custom-muted-rgb） */
+  --color-muted: rgba(var(--custom-muted-rgb, 255, 255, 255), 0.7);
   --color-17: #111;
   --color-18: #eee;
   --color-19: #6a11cb;
@@ -77,8 +82,11 @@
   --hover: rgba(var(--custom-text-rgb, 255, 255, 255), 0.15);
   --hover-half: rgba(var(--custom-text-rgb, 255, 255, 255), 0.07);
   --error: #ff3b30;
+  --error-rgb: 255, 59, 48;
   --success: #4caf50;
+  --success-rgb: 76, 175, 80;
   --warning: #ff9500;
+  --warning-rgb: 255, 149, 0;
 
   --brightness: 1.5;
 
@@ -94,7 +102,7 @@
   --color-18: #333333;
   --rgba-4: rgba(240, 240, 240, 0.95);
   --rgba-5: rgba(0, 0, 0, 0.1);
-  --rgba-6: rgba(var(--custom-text-rgb, 0, 0, 0), 0.7);
+  --rgba-6: rgba(var(--custom-muted-rgb, 0, 0, 0), 0.7);
   --rgba-7: rgba(255, 255, 255, 1);
   --rgba-8: rgba(255, 255, 255, 0);
   --rgba-9: rgba(0, 0, 0, 0.1);
@@ -111,7 +119,12 @@
   --text: var(--custom-text, #222222);
   --bg-1: rgba(var(--custom-bg-rgb, 255, 255, 255), 0.95);
   --border-1: var(--custom-border, rgba(0, 0, 0, 0.1));
-  --mica: rgba(var(--custom-bg-rgb, 255, 255, 255), var(--mica-opacity));
+  --mica: rgba(var(--custom-panel-rgb, 255, 255, 255), var(--mica-opacity));
+  /* 语义面板层 */
+  --color-panel: rgba(var(--custom-panel-rgb, 255, 255, 255), 0.72);
+  --color-panel-strong: rgba(var(--custom-panel-rgb, 255, 255, 255), 0.92);
+  /* 语义次文字层 */
+  --color-muted: rgba(var(--custom-muted-rgb, 0, 0, 0), 0.7);
   --bg50: rgba(var(--custom-bg-rgb, 255, 255, 255), 0.5);
   --bg70: rgba(var(--custom-bg-rgb, 255, 255, 255), 0.7);
   --bg: rgba(var(--custom-bg-rgb, 255, 255, 255), 1);
@@ -120,8 +133,11 @@
   --hover: rgba(var(--custom-text-rgb, 0, 0, 0), 0.06);
   --hover-half: rgba(var(--custom-text-rgb, 0, 0, 0), 0.03);
   --error: #dc3545;
+  --error-rgb: 220, 53, 69;
   --success: #198754;
+  --success-rgb: 25, 135, 84;
   --warning: #ffc107;
+  --warning-rgb: 255, 193, 7;
 
   --brightness: 0.8;
 }

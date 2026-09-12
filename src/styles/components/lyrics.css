@@ -1,9 +1,9 @@
-/* 歌词文字描边：歌词叠在封面/背景图上时保证轮廓清晰，颜色随主题反向 */
+/* 歌词文字描边色：跟随主题反向（白字用暗描边、黑字用亮描边），双层实现只外扩不侵字面 */
 :root.dark {
-  --lyric-stroke: rgba(0, 0, 0, 0.55);
+  --lyric-stroke: rgba(0, 0, 0, 0.75);
 }
 :root.light {
-  --lyric-stroke: rgba(255, 255, 255, 0.6);
+  --lyric-stroke: rgba(255, 255, 255, 0.85);
 }
 
 /* 手动搜索歌词按钮 */
@@ -92,7 +92,6 @@
   word-break: break-word;
   transition: opacity 0.25s ease, transform 0.25s ease;
   will-change: opacity;
-  -webkit-text-stroke: 1px var(--lyric-stroke);
 }
 
 /* 翻译行（小字，跟随歌词行一起高亮/缩放） */
@@ -102,7 +101,18 @@
   opacity: 0.6;
   margin-top: 2px;
   letter-spacing: 0.01em;
-  -webkit-text-stroke: 0.7px var(--lyric-stroke);
+  position: relative;
+}
+
+/* 翻译行外描边副本（视觉宽约 0.8px） */
+.lyric-translation::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: transparent;
+  pointer-events: none;
+  -webkit-text-stroke: 1.6px var(--lyric-stroke);
 }
 
 /* 当前播放的歌词行（滚动方案：行固定，仅高亮） */
@@ -229,13 +239,24 @@
 .char {
   white-space: pre-wrap;
   display: inline-block;
+  position: relative;
+  z-index: 0; /* 自身 stacking context：描边副本锁在字内，不被父级背景压掉 */
+}
+
+/* 逐字歌词外描边副本：底层只描边不填充，本体盖住内半 → 仅外扩可见（视觉宽约 1px） */
+.char::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: transparent;
+  pointer-events: none;
+  -webkit-text-stroke: 2px var(--lyric-stroke);
 }
 
 .char.active {
   filter: brightness(var(--brightness));
   color: var(--text);
-  /* 渐变填充字不再叠加描边，避免与 background-clip 渲染打架 */
-  -webkit-text-stroke-width: 0;
   /* 用 transform 缩放代替 font-size 放大：不参与布局，换行位置不会因放大而改变 */
   transform: scale(1.15);
   opacity: 1;
