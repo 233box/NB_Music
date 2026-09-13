@@ -186,25 +186,17 @@ class UIManager {
         });
     }
     initializeAdvancedControls() {
-        // 替换原有的速度选择下拉框实现
-        const speedControl = document.querySelector(".speed-control");
-        if (speedControl) {
-            this.createCustomSelect(
-                speedControl,
-                [
-                    { value: "0.5", text: "0.5x" },
-                    { value: "1", text: "1x", selected: true },
-                    { value: "1.25", text: "1.25x" },
-                    { value: "1.5", text: "1.5x" },
-                    { value: "2", text: "2x" }
-                ],
-                (value) => {
+        // 速度下拉框在 HTML 中已是展开的静态自定义下拉结构（.speed-control-wrapper），
+        // 直接绑定其交互即可；不要走 createCustomSelect 再生成一份 DOM，
+        // 否则会与静态结构重复，且新节点不含 wrapper 类会丢失播放条的定位样式。
+        const speedControlWrapper = document.querySelector(".speed-control-wrapper");
+        if (speedControlWrapper) {
+            this.initStaticCustomSelect(speedControlWrapper, (value) => {
+                if (value && this.audioPlayer) {
                     this.audioPlayer.audio.playbackRate = parseFloat(value);
                 }
-            );
+            });
         }
-
-        // 速度下拉框交互由 createCustomSelect 统一处理（含选项点击与全局关闭）
 
         const downloadBtn = document.querySelector(".download");
         downloadBtn?.addEventListener("click", async () => {
@@ -1170,6 +1162,69 @@ class UIManager {
         // 在原select位置插入自定义下拉框，并隐藏原select
         selectElement.parentNode.insertBefore(customSelect, selectElement);
         selectElement.style.display = "none";
+    }
+
+    /**
+     * 为已存在于 HTML 中的静态自定义下拉框绑定交互
+     * （HTML 已展开 .select-selected / .select-items 结构，无需再生成 DOM）
+     * @param {HTMLElement} container - 自定义下拉容器（含 .select-selected / .select-items）
+     * @param {Function} onChangeCallback - 选中项变化时的回调，参数为选项的 data-value
+     */
+    initStaticCustomSelect(container, onChangeCallback) {
+        const selectSelected = container.querySelector(".select-selected");
+        const selectItems = container.querySelector(".select-items");
+        if (!selectSelected || !selectItems) {
+            return;
+        }
+
+        // 点击选中区域时切换下拉框显示状态
+        selectSelected.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            // 关闭其他所有已打开的下拉框
+            document.querySelectorAll(".select-selected.open").forEach((el) => {
+                if (el !== selectSelected) {
+                    el.classList.remove("open");
+                    el.nextElementSibling?.classList.remove("open");
+                }
+            });
+
+            // 切换当前下拉框状态
+            selectSelected.classList.toggle("open");
+            selectItems.classList.toggle("open");
+        });
+
+        // 点击选项时更新选中状态并触发回调
+        selectItems.querySelectorAll(".select-item").forEach((item) => {
+            item.addEventListener("click", (e) => {
+                e.stopPropagation();
+
+                selectItems.querySelectorAll(".select-item").forEach((el) => {
+                    el.classList.remove("selected");
+                });
+                item.classList.add("selected");
+                selectSelected.textContent = item.textContent;
+
+                // 关闭下拉框
+                selectSelected.classList.remove("open");
+                selectItems.classList.remove("open");
+
+                if (onChangeCallback) {
+                    onChangeCallback(item.dataset.value);
+                }
+            });
+        });
+
+        // 点击页面其他区域时关闭所有下拉框（单例：仅首次创建时挂一次监听）
+        if (!UIManager._globalSelectCloseBound) {
+            UIManager._globalSelectCloseBound = true;
+            document.addEventListener("click", () => {
+                document.querySelectorAll(".select-selected.open").forEach((el) => {
+                    el.classList.remove("open");
+                    el.nextElementSibling?.classList.remove("open");
+                });
+            });
+        }
     }
 
     showDefaultUi() {
