@@ -250,6 +250,8 @@ class LyricsPlayer {
                 const match = line.match(/\[(\d{2}):(\d{2})[:.](\d{2,3})\](.*)/);
                 if (match) {
                     const [, mm, ss, ms, text] = match;
+                    // 带时间戳但无文字的空白行（网易云间奏占位常见）直接跳过，避免渲染为空行
+                    if (!text.trim()) return;
                     // 2 位为百分秒（0.01s），3 位为毫秒
                     const frac = parseInt(ms) * (ms.length === 2 ? 10 : 1);
                     const startTime = (parseInt(mm) * 60 + parseInt(ss)) * 1000 + frac;
@@ -293,6 +295,8 @@ class LyricsPlayer {
                                 duration: parseInt(duration)
                             };
                         });
+                        // 逐字歌词行若整行无有效文字，同样跳过
+                        if (!chars.some((char) => char.text.trim())) return;
                         parsedData.push({
                             type: "lyric",
                             lineStart,
@@ -946,7 +950,7 @@ class LyricsPlayer {
                 const activeLineData = lyricsData[this.activeLineIndex];
                 if (activeLineData) {
                     const lineText = activeLineData.chars.map((char) => char.text).join("");
-                    currentLine = lineText || "等待播放...";
+                    currentLine = lineText;
                     currentTranslation = activeLineData.translation || "";
 
                     // 找下一行
