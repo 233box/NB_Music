@@ -23,6 +23,10 @@ class PlaylistManager {
         this.currentLoadingController = null;
         this.currentPlayingBvid = null;
         this.requestTimeoutMs = 15000; // 音频加载超时保护（毫秒）
+        this._playRetrySeq = 0; // 播放重试代际：用户暂停或发起新播放时使其失效，立即中断进行中的重试
+        this.isRetrying = false; // 是否处于播放重试流程中（供 UI 判断「点击=中止」）
+        // 惰性歌词：记录正在联网补取歌词的 bvid，避免重复请求
+        this._lyricFetching = new Set();
 
         // 'repeat', 'shuffle', 'repeat-one'
         this.playMode = localStorage.getItem("nbmusic_play_mode") || "repeat";
@@ -309,6 +313,11 @@ class PlaylistManager {
         // （原为 UIManager 猴子补丁，收敛到方法内部，避免重复包装）
         document.body.classList.add("song-changing");
         try {
+            // 用户切歌/选曲：清除上一首遗留的暂停意图，允许自动恢复
+            if (autoPlay && this.audioPlayer) {
+                this.audioPlayer.userPaused = false;
+                this.audioPlayer.errorRecoveryCount = 0;
+            }
             if (this.playlist.length === 0) {
                 this.uiManager.showDefaultUi();
                 return;
@@ -404,9 +413,38 @@ class PlaylistManager {
         }
     }
 
+    // 惰性歌词：歌曲 lyric 为空时按标题联网补取，成功后写回歌单持久化
+    async ensureLyrics(song) {
+        if (!song || !song.bvid || song.lyric) return;
+        if (this._lyricFetching.has(song.bvid)) return;
+        if (!this.musicSearcher || typeof this.musicSearcher.getLyrics !== "function") return;
+
+        this._lyricFetching.add(song.bvid);
+        try {
+            const lyric = await this.musicSearcher.getLyrics(song.title, song.bvid, song.cid || null);
+            song.lyric = (lyric && lyric.trim()) || "暂无歌词，尽情欣赏音乐";
+        } catch (error) {
+            console.warn("补取歌词失败:", song.title, error);
+            song.lyric = "暂无歌词，尽情欣赏音乐";
+        } finally {
+            this._lyricFetching.delete(song.bvid);
+        }
+
+        if (this.musiclistManager && typeof this.musiclistManager.persistSongLyric === "function") {
+            this.musiclistManager.persistSongLyric(song.bvid, song.lyric);
+        }
+        // 若仍停留在该曲，刷新歌词显示
+        const current = this.getCurrentSong();
+        if (current && current.bvid === song.bvid) {
+            this.lyricsPlayer.changeLyrics(song.lyric);
+        }
+    }
+
     async updatePlayingUI(song) {
         // 更新歌词
         this.lyricsPlayer.changeLyrics(song.lyric);
+        // 同步进来的新歌 lyric 为空，播放到该曲时再补取（不阻塞播放）
+        this.ensureLyrics(song);
 
         // 更新播放列表UI，添加平滑切换动画
         const oldPlayingElement = document.querySelector("#playing-list .song.playing");
@@ -453,6 +491,9 @@ class PlaylistManager {
 
     async tryPlayWithRetry(song, maxRetries = 2) {
         let lastError;
+        // 本轮重试的代际；被用户暂停或新播放取代后立即失效
+        const retrySeq = ++this._playRetrySeq;
+        this.isRetrying = true;
         const playButton = document.querySelector(".control>.buttons>.play");
         playButton.disabled = true;
         const progressBar = document.querySelector(".control .progress .progress-bar .progress-bar-inner");
@@ -480,6 +521,10 @@ class PlaylistManager {
         }, this.requestTimeoutMs);
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
+            // 用户已暂停或本轮已被取代：立即停止重试，避免反复播放开头
+            if (this.audioPlayer?.userPaused || retrySeq !== this._playRetrySeq) {
+                return;
+            }
             try {
                 let currentUrl = song.audio;
 
@@ -521,11 +566,12 @@ class PlaylistManager {
                     try {
                         const response = await axios.get(currentUrl, {
                             timeout: 5000,
-                            validateStatus: (status) => status !== 403 // 只将403视为错误
+                            // 4xx/5xx 一律视为不可用（含 403 防盗链、500 CDN 异常）
+                            validateStatus: (status) => status >= 200 && status < 400
                         });
 
-                        if (response.status === 403) {
-                            throw new Error("访问被拒绝");
+                        if (response.status >= 400) {
+                            throw new Error("音频 URL 不可用: " + response.status);
                         }
                     } catch {
                         console.warn("主音频URL不可用，尝试备用URL");
@@ -555,6 +601,10 @@ class PlaylistManager {
 
                 if (attempt < maxRetries - 1) {
                     await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+                    // 等待期间用户可能已暂停，避免继续重试
+                    if (this.audioPlayer?.userPaused || retrySeq !== this._playRetrySeq) {
+                        return;
+                    }
                 } else {
                     document.querySelector(".control>.buttons>.play").classList = "play paused";
                     this.uiManager.showNotification("播放出错: " + error.message, "error");
@@ -567,9 +617,40 @@ class PlaylistManager {
                 // 清除超时
                 clearTimeout(this.loadingTimeout);
                 this.loadingTimeout = null;
+
+                // 仅当前代际仍有效时清除重试标记
+                if (retrySeq === this._playRetrySeq) {
+                    this.isRetrying = false;
+                }
             }
         }
     }
+
+    // 立即取消进行中的播放重试与加载（用户暂停时由 AudioPlayer 调用）
+    cancelPlayRetry() {
+        // 递增代际，使正在运行的 tryPlayWithRetry 在下一个检查点退出
+        this._playRetrySeq += 1;
+        this.isRetrying = false;
+
+        if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
+        }
+        if (this.currentLoadingController) {
+            this.currentLoadingController.abort();
+        }
+        this.isLoading = false;
+
+        const playButton = document.querySelector(".control>.buttons>.play");
+        if (playButton) {
+            playButton.disabled = false;
+        }
+        const progressBar = document.querySelector(".control .progress .progress-bar .progress-bar-inner");
+        if (progressBar) {
+            progressBar.classList.remove("loading");
+        }
+    }
+
     async loadAndPlayAudio(song, replay, signal, autoPlay = true) {
         const playButton = document.querySelector(".control>.buttons>.play");
         const progressBar = document.querySelector(".control .progress .progress-bar .progress-bar-inner");

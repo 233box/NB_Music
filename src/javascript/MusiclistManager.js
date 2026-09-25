@@ -798,6 +798,38 @@ class MusiclistManager {
         this.renderPlaylistList();
         this.renderSongList();
     }
+
+    // 同步完成后把新歌写回正在播放的队列。否则当前歌单的播放列表看不到新歌，
+    // 且下一次 handlePlaylistUpdate 会用旧队列反向覆盖掉刚同步进来的歌。
+    syncActiveQueue(playlist) {
+        if (!this.playlistManager || this.playlistManager.currentPlaylistId !== playlist.id) return;
+        const currentBvid = this.playlistManager.getCurrentSong()?.bvid;
+        this.playlistManager.playlist = [...playlist.songs];
+        if (currentBvid) {
+            const idx = this.playlistManager.playlist.findIndex((s) => s.bvid === currentBvid);
+            if (idx >= 0) this.playlistManager.playingNow = idx;
+        }
+        // 长度变了，洗牌序列需失效重建
+        this.playlistManager.shuffleOrder = null;
+        if (this.uiManager) this.uiManager.renderPlaylist();
+    }
+
+    // 惰性歌词补取成功后写回歌单并持久化（含当前播放队列里的同名对象）
+    persistSongLyric(bvid, lyric) {
+        if (!bvid || !lyric) return;
+        let changed = false;
+        this.playlists.forEach((p) => {
+            const song = p.songs.find((s) => s.bvid === bvid);
+            if (song && song.lyric !== lyric) {
+                song.lyric = lyric;
+                changed = true;
+            }
+        });
+        const live = this.playlistManager?.playlist?.find((s) => s.bvid === bvid);
+        if (live && live.lyric !== lyric) live.lyric = lyric;
+        if (changed) this.savePlaylists();
+    }
+
     async importFromBiliFav(mediaId) {
         let importNotification = null;
 
@@ -819,8 +851,15 @@ class MusiclistManager {
             const pageSize = 20;
             const totalPages = Math.ceil(totalCount / pageSize);
 
-            // 创建新歌单
             const playlistTitle = `${favInfo.title}`;
+
+            // 幂等导入：同名歌单已存在时就地绑定来源并增量合并，不重复建单
+            const existingIndex = this.playlists.findIndex((p) => p.name === playlistTitle);
+            if (existingIndex !== -1) {
+                return await this.mergeIntoExistingPlaylist(existingIndex, favId, favInfo);
+            }
+
+            // 创建新歌单
             const playlistIndex = this.playlists.length;
             this.playlists.push({
                 id: this.generateUUID(),
@@ -909,7 +948,93 @@ class MusiclistManager {
             };
         }
     }
-    async updateBiliFav(playlistIndex) {
+    // 把收藏夹增量并入已存在的同名歌单，并记下绑定来源（meta.mediaId）
+    async mergeIntoExistingPlaylist(playlistIndex, mediaId, favInfo) {
+        let importNotification = null;
+        try {
+            const playlist = this.playlists[playlistIndex];
+            const totalCount = favInfo.media_count;
+            const pageSize = 20;
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const existingBVids = new Set(playlist.songs.map((s) => s.bvid));
+
+            importNotification = this.uiManager.showNotification(`正在同步: 0/${totalCount}`, "info", { showProgress: true, progress: 0 });
+
+            const newSongs = [];
+            for (let page = 1; page <= totalPages; page++) {
+                const res = await axios.get(`https://api.bilibili.com/x/v3/fav/resource/list?media_id=${mediaId}&pn=${page}&ps=${pageSize}&platform=web&order=mtime`);
+                if (res.data.code !== 0) continue;
+                const medias = res.data.data.medias || [];
+                for (const media of medias) {
+                    if (media.attr === 1 || existingBVids.has(media.bvid)) continue;
+                    existingBVids.add(media.bvid);
+                    // 歌词惰性：留空，播放到该曲时由 PlaylistManager.ensureLyrics 补取
+                    newSongs.push({
+                        title: media.title,
+                        artist: media.upper?.name || "",
+                        bvid: media.bvid,
+                        cid: null,
+                        duration: media.duration,
+                        poster: media.cover,
+                        lyric: ""
+                    });
+                }
+
+                const processed = Math.min(page * pageSize, totalCount);
+                const msgEl = importNotification.querySelector(".notification-message");
+                const barEl = importNotification.querySelector(".notification-progress-inner");
+                if (msgEl) msgEl.textContent = `正在同步: ${processed}/${totalCount}`;
+                if (barEl) barEl.style.width = `${Math.min((processed / totalCount) * 100, 100)}%`;
+            }
+
+            // 无论是否有新歌，都记录/刷新绑定来源
+            playlist.meta = { mediaId, type: "bilibili", total: totalCount };
+            if (newSongs.length > 0) {
+                playlist.songs = [...newSongs, ...playlist.songs]; // 最新收藏排在最前
+            }
+
+            this.savePlaylists();
+            this.syncActiveQueue(playlist);
+            this.renderPlaylistList();
+            this.renderSongList();
+
+            if (newSongs.length > 0) {
+                this.uiManager.showNotification(`「${playlist.name}」新增 ${newSongs.length} 首`, "success");
+                return { success: true, message: `已同步到歌单"${playlist.name}"，新增 ${newSongs.length} 首` };
+            }
+            this.uiManager.showNotification(`「${playlist.name}」已是最新`, "info");
+            return { success: true, message: `歌单"${playlist.name}"已是最新` };
+        } catch (error) {
+            console.error("合并收藏夹到已有歌单失败:", error);
+            this.uiManager.showNotification(`同步失败: ${error.message}`, "error");
+            return { success: false, message: "同步失败: " + error.message };
+        } finally {
+            if (importNotification) importNotification.remove();
+        }
+    }
+
+    // 按歌单名匹配当前账号的收藏夹，自动补上来源绑定（点「检查更新」时的兜底，免去手动导入）
+    async resolveMediaIdForPlaylist(playlist) {
+        const mid = this.loginManager?.userMid;
+        if (!mid) return null;
+        try {
+            const res = await axios.get(`https://api.bilibili.com/x/v3/fav/folder/created/list-all?up_mid=${mid}`);
+            if (res.data.code !== 0) return null;
+            const folders = res.data.data?.list || [];
+            const hit = folders.find((f) => f.title === playlist.name);
+            if (!hit) return null;
+            playlist.meta = { ...(playlist.meta || {}), mediaId: String(hit.id), type: "bilibili", total: hit.media_count };
+            this.savePlaylists();
+            return String(hit.id);
+        } catch (error) {
+            console.warn("自动匹配收藏夹失败:", error);
+            return null;
+        }
+    }
+
+    async updateBiliFav(playlistIndex, options = {}) {
+        // fetchLyrics=false：同步时跳过歌词联网（惰性），留空待播放时补取
+        const { fetchLyrics = false } = options;
         const playlist = this.playlists[playlistIndex];
         let updateNotification = null;
         
@@ -922,16 +1047,21 @@ class MusiclistManager {
         try {
             this.isUpdating = true; // 设置更新状态
             // 增强类型验证逻辑
-            const { mediaId, seasonId, type } = playlist.meta || {};
+            const meta = playlist.meta || {};
+            const { seasonId, type } = meta;
+            let mediaId = meta.mediaId;
 
             // 根据不同类型选择更新方式
             if (type === 'bilibili-season' && seasonId) {
                 return await this.updateBiliSeason(playlistIndex);
             }
 
-            // 原有收藏夹更新逻辑
+            // 未绑定来源时，按歌单名自动匹配当前账号的同名收藏夹并补上绑定
             if (!mediaId) {
-                throw new Error('此歌单未关联B站收藏夹,请重新添加收藏夹');
+                mediaId = await this.resolveMediaIdForPlaylist(playlist);
+            }
+            if (!mediaId) {
+                throw new Error('未找到与歌单同名的B站收藏夹，请先用「导入」手动绑定来源');
             }
 
             // 修改API请求使用v3接口
@@ -957,7 +1087,7 @@ class MusiclistManager {
             // 遍历所有页面
             for (let page = 1; page <= totalPages; page++) {
                 const res = await axios.get(
-                    `https://api.bilibili.com/x/v3/fav/resource/list?media_id=${mediaId}&pn=${page}&ps=${pageSize}`
+                    `https://api.bilibili.com/x/v3/fav/resource/list?media_id=${mediaId}&pn=${page}&ps=${pageSize}&platform=web&order=mtime`
                 );
 
                 if (res.data.code === 0) {
@@ -994,23 +1124,18 @@ class MusiclistManager {
 
             // 应用更新
             if (newSongs.length > 0) {
-                // 处理新增歌曲的歌词
-                const newSongsWithLyrics = await this.processSongsLyrics(newSongs); // 新增歌词处理
+                // 歌词惰性：默认不再逐首联网搜歌词，留空，播放到该曲时再补取
+                const preparedSongs = fetchLyrics
+                    ? await this.processSongsLyrics(newSongs)
+                    : newSongs.map((song) => ({ ...song, lyric: "" }));
 
-                playlist.songs = [...newSongsWithLyrics, ...playlist.songs]; // 使用带歌词的新数据
+                playlist.songs = [...preparedSongs, ...playlist.songs];
                 this.savePlaylists();
+                this.syncActiveQueue(playlist);
                 this.uiManager.showNotification(`发现${newSongs.length}首新歌曲`, 'success');
 
-                // 强制刷新歌单列表并保持激活状态
                 this.renderPlaylistList();
                 this.renderSongList();
-
-                // 高亮更新后的歌单条目
-                const updatedElement = document.querySelector(`li[data-id="${playlist.id}"]`);
-                if (updatedElement) {
-                    updatedElement.classList.add('active');
-                    updatedElement.click();
-                }
             } else {
                 this.uiManager.showNotification('当前歌单已是最新', 'info');
             }
